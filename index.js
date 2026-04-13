@@ -38,9 +38,9 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
 // ===== STATE =====
 let statusMessage = null;
-let updaterInterval = null;
+let updaterTimeout = null;
 let lastData = null;
-let commandRunning = false; // 🔥 prevents double execution
+let commandRunning = false;
 
 // ===== SAVE / LOAD =====
 function savePanel(id) {
@@ -60,21 +60,11 @@ async function getStatus() {
         });
         const data = await res.json();
 
-        if (!data.online) {
-            return {
-                online: false,
-                players: 0,
-                max: 0,
-                list: [],
-                version: "Unknown"
-            };
-        }
-
         return {
-            online: true,
-            players: data.players.online,
-            max: data.players.max,
-            list: data.players.list || [],
+            online: data.online || false,
+            players: data.players?.online || 0,
+            max: data.players?.max || 0,
+            list: data.players?.list || [],
             version: data.version || "Unknown"
         };
 
@@ -89,7 +79,7 @@ async function getStatus() {
     }
 }
 
-// ===== BUILD EMBED =====
+// ===== EMBED =====
 function buildEmbed(data) {
     return new EmbedBuilder()
         .setTitle("📡 MC Server Status")
@@ -98,49 +88,46 @@ function buildEmbed(data) {
             { name: "Status", value: data.online ? "🟢 Online" : "🔴 Offline", inline: true },
             { name: "Players", value: `${data.players}/${data.max}`, inline: true },
             { name: "Version", value: data.version, inline: true },
-            { name: "Player List", value: data.list.length ? data.list.join(", ") : "No players", inline: false }
+            { name: "Player List", value: data.list.length ? data.list.join(", ") : "No players" }
         )
-        .setFooter({ text: "Last updated" })
         .setTimestamp();
 }
 
-// ===== UPDATE LOOP =====
+// ===== RELIABLE LOOP =====
 function startUpdater(channel) {
-    if (updaterInterval) clearInterval(updaterInterval);
+    if (updaterTimeout) clearTimeout(updaterTimeout);
 
-    updaterInterval = setInterval(async () => {
+    async function loop() {
         console.log("⏱ Checking update...");
 
         if (!statusMessage) return;
 
-        const data = await getStatus();
-
-        // Smart comparison
-        if (
-            lastData &&
-            data.online === lastData.online &&
-            data.players === lastData.players &&
-            data.max === lastData.max
-        ) {
-            return;
-        }
-
-        lastData = data;
-
         try {
-            await statusMessage.edit({
-                embeds: [buildEmbed(data)]
-            });
+            const data = await getStatus();
 
-            console.log("✅ Updated");
+            if (
+                !lastData ||
+                data.online !== lastData.online ||
+                data.players !== lastData.players ||
+                data.max !== lastData.max
+            ) {
+                lastData = data;
 
-        } catch {
-            console.log("❌ Message lost, stopping updater");
-            clearInterval(updaterInterval);
-            statusMessage = null;
+                await statusMessage.edit({
+                    embeds: [buildEmbed(data)]
+                });
+
+                console.log("✅ Updated");
+            }
+
+        } catch (err) {
+            console.log("❌ Update error:", err.message);
         }
 
-    }, 60000);
+        updaterTimeout = setTimeout(loop, 60000);
+    }
+
+    loop();
 }
 
 // ===== READY =====
@@ -152,8 +139,6 @@ client.on('ready', async () => {
         { body: commands }
     );
 
-    console.log("✅ Command registered");
-
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
 
@@ -163,7 +148,7 @@ client.on('ready', async () => {
             console.log("🔁 Restored panel");
             startUpdater(channel);
         } catch {
-            console.log("⚠️ Saved panel not found");
+            console.log("⚠️ Panel not found");
         }
     }
 });
@@ -171,55 +156,57 @@ client.on('ready', async () => {
 // ===== COMMAND =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
+    if (interaction.commandName !== 'serverstat') return;
 
-    if (interaction.commandName === 'serverstat') {
+    if (commandRunning) return;
+    commandRunning = true;
 
-        // 🚫 Prevent duplicate execution
-        if (commandRunning) {
-            console.log("⚠️ Duplicate command blocked");
-            return;
+    try {
+        // ✅ MUST BE FIRST
+        await interaction.deferReply({ ephemeral: true });
+
+        const channel = await client.channels.fetch(CHANNEL_ID);
+
+        const savedId = loadPanel();
+        if (savedId) {
+            try {
+                const oldMsg = await channel.messages.fetch(savedId);
+                await oldMsg.delete();
+            } catch {}
         }
 
-        commandRunning = true;
+        const data = await getStatus();
+        lastData = data;
 
+        statusMessage = await channel.send({
+            embeds: [buildEmbed(data)]
+        });
+
+        savePanel(statusMessage.id);
+
+        // ⚠️ Even if this fails, updater already has message
         try {
-            await interaction.deferReply({ ephemeral: true });
-
-            const channel = await client.channels.fetch(CHANNEL_ID);
-
-            // (Optional: safe delete of saved panel)
-            const savedId = loadPanel();
-            if (savedId) {
-                try {
-                    const oldMsg = await channel.messages.fetch(savedId);
-                    if (oldMsg) await oldMsg.delete();
-                } catch {}
-            }
-
-            const data = await getStatus();
-            lastData = data;
-
-            statusMessage = await channel.send({
-                embeds: [buildEmbed(data)]
-            });
-
-            savePanel(statusMessage.id);
-
             await interaction.editReply({
                 content: "✅ Panel created/reset!"
             });
-
-            startUpdater(channel);
-
         } catch (err) {
-            console.log("❌ Command error:", err);
+            console.log("⚠️ Reply failed:", err.message);
         }
 
-        // 🔓 Release lock
-        setTimeout(() => {
-            commandRunning = false;
-        }, 2000);
+        // ✅ ALWAYS START
+        startUpdater(channel);
+
+    } catch (err) {
+        console.log("❌ Command error:", err.message);
+
+        if (statusMessage) {
+            startUpdater(await client.channels.fetch(CHANNEL_ID));
+        }
     }
+
+    setTimeout(() => {
+        commandRunning = false;
+    }, 2000);
 });
 
 // ===== START =====
@@ -227,5 +214,5 @@ client.login(DISCORD_TOKEN);
 
 // ===== KEEP ALIVE =====
 require('http').createServer((req, res) => {
-    res.end("Bot alive");
+    res.end("Alive");
 }).listen(3000);
