@@ -79,7 +79,8 @@ async function getStatus(ip) {
             players: data.players?.online || 0,
             max: data.players?.max || 0,
             list: data.players?.list || [],
-            version: data.version || "Unknown"
+            version: data.version || "Unknown",
+            icon: data.icon || null
         };
 
     } catch {
@@ -88,7 +89,8 @@ async function getStatus(ip) {
             players: 0,
             max: 0,
             list: [],
-            version: "Unknown"
+            version: "Unknown",
+            icon: null
         };
     }
 }
@@ -121,25 +123,35 @@ function buildEmbed(data) {
         .setTimestamp();
 }
 
-// ===== SIMPLE EMBED (/mcsrv) =====
+// ===== SIMPLE EMBED (/mcsrv UPDATED) =====
 function buildSimpleEmbed(data, ip) {
     const playerList = data.list.length
-        ? data.list.slice(0, 10).map(p => `• ${p}`).join("\n")
+        ? data.list.slice(0, 10)
+            .map(p => `• ${p}`)
+            .join("\n") +
+          (data.list.length > 10 ? `\n+ ${data.list.length - 10} more...` : "")
         : "No players online";
 
-    return new EmbedBuilder()
+    const embed = new EmbedBuilder()
         .setTitle(`Server Check: ${ip}`)
         .setColor(data.online ? 0x22c55e : 0xef4444)
 
         .addFields(
-            { name: "Status", value: data.online ? "🟢 Online" : "🔴 Offline", inline: true },
-            { name: "Players", value: `${data.players} / ${data.max}`, inline: true },
-            { name: "Version", value: data.version, inline: true },
-            { name: "Players Online", value: playerList, inline: false }
+            { name: "📡 Status", value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``, inline: true },
+            { name: "👥 Players", value: `\`\`\`${data.players} / ${data.max}\`\`\``, inline: true },
+            { name: "⚙️ Version", value: `\`\`\`${data.version}\`\`\``, inline: true },
+            { name: "👥 Players Online", value: `\`\`\`\n${playerList}\n\`\`\``, inline: false }
         )
 
         .setFooter({ text: "Watcher v1 • Quick Check" })
         .setTimestamp();
+
+    // Add server icon if available
+    if (data.icon) {
+        embed.setThumbnail(data.icon);
+    }
+
+    return embed;
 }
 
 // ===== ROTATING STATUS =====
