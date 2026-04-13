@@ -78,7 +78,7 @@ async function getStatus() {
     }
 }
 
-// ===== EMBED (BOX STYLE UI) =====
+// ===== EMBED (BOX UI) =====
 function buildEmbed(data) {
     const playerList = data.list.length
         ? data.list.slice(0, 10)
@@ -90,9 +90,7 @@ function buildEmbed(data) {
     return new EmbedBuilder()
         .setTitle("Adholokham MC (OmniCraft)")
         .setDescription("Forge-powered OmniCraft experience • Survival • Community-driven gameplay")
-
         .setColor(data.online ? 0x22c55e : 0xef4444)
-
         .setThumbnail("https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png")
 
         .addFields(
@@ -174,7 +172,7 @@ function startUpdater(channel) {
     updaterTimeout = setTimeout(loop, 60000);
 }
 
-// ===== READY (FIXED CLEANUP) =====
+// ===== READY (RECOVERY SYSTEM) =====
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
@@ -186,28 +184,43 @@ client.on('ready', async () => {
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
 
+    let restored = false;
+
+    // Try restore via saved ID
     if (savedId) {
         try {
-            statusMessage = await channel.messages.fetch(savedId);
-            console.log("🔁 Restored panel");
-            startUpdater(channel);
+            const msg = await channel.messages.fetch(savedId);
+            statusMessage = msg;
+            restored = true;
+            console.log("🔁 Restored panel via saved ID");
         } catch {
-            console.log("⚠️ Saved panel missing → cleaning old panels");
-
-            const messages = await channel.messages.fetch({ limit: 50 });
-
-            const panels = messages.filter(msg =>
-                msg.author.id === client.user.id &&
-                msg.embeds.length > 0 &&
-                msg.embeds[0].title === "Adholokham MC (OmniCraft)"
-            );
-
-            for (const msg of panels.values()) {
-                try { await msg.delete(); } catch {}
-            }
-
-            fs.writeFileSync(SAVE_FILE, JSON.stringify({ id: null }));
+            console.log("⚠️ Saved ID invalid");
         }
+    }
+
+    // Fallback: find panel in channel
+    if (!restored) {
+        const messages = await channel.messages.fetch({ limit: 50 });
+
+        const panel = messages.find(msg =>
+            msg.author.id === client.user.id &&
+            msg.embeds.length > 0 &&
+            msg.embeds[0].title === "Adholokham MC (OmniCraft)"
+        );
+
+        if (panel) {
+            statusMessage = panel;
+            savePanel(panel.id);
+            restored = true;
+            console.log("🔍 Recovered panel from channel");
+        }
+    }
+
+    // Start updater if panel exists
+    if (statusMessage) {
+        startUpdater(channel);
+    } else {
+        console.log("⚠️ No panel found (will create on command)");
     }
 });
 
