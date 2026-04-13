@@ -30,7 +30,7 @@ const client = new Client({
 const commands = [
     new SlashCommandBuilder()
         .setName('serverstat')
-        .setDescription('Create/reset MC status panel')
+        .setDescription('Create or update MC status panel')
         .toJSON()
 ];
 
@@ -40,7 +40,6 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 let statusMessage = null;
 let updaterTimeout = null;
 let lastData = null;
-const processedInteractions = new Set();
 
 // ===== SAVE / LOAD =====
 function savePanel(id) {
@@ -161,58 +160,61 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'serverstat') return;
 
-    // 🚫 BLOCK DUPLICATE INTERACTIONS
-    if (processedInteractions.has(interaction.id)) {
-        console.log("⚠️ Duplicate interaction blocked");
-        return;
-    }
-    processedInteractions.add(interaction.id);
-
     const channel = await client.channels.fetch(CHANNEL_ID);
 
     try {
         const data = await getStatus();
         lastData = data;
 
-        // delete old panel
+        let msg = null;
         const savedId = loadPanel();
+
+        // 🔁 Try reuse existing panel
         if (savedId) {
             try {
-                const oldMsg = await channel.messages.fetch(savedId);
-                await oldMsg.delete();
-            } catch {}
+                msg = await channel.messages.fetch(savedId);
+            } catch {
+                msg = null;
+            }
         }
 
-        const newMsg = await channel.send({
-            embeds: [buildEmbed(data)]
-        });
+        if (msg) {
+            // ♻️ Update existing panel
+            await msg.edit({
+                embeds: [buildEmbed(data)]
+            });
 
-        statusMessage = newMsg;
-        savePanel(newMsg.id);
+            statusMessage = msg;
+            console.log("♻️ Reused existing panel");
 
-        // start updater only once
+        } else {
+            // 🆕 Create new panel
+            msg = await channel.send({
+                embeds: [buildEmbed(data)]
+            });
+
+            statusMessage = msg;
+            savePanel(msg.id);
+
+            console.log("🆕 Created new panel");
+        }
+
+        // 🔁 Start updater
         startUpdater(channel);
 
-        // safe reply
+        // Safe reply
         try {
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
-                    content: "✅ Panel created/reset!",
+                    content: "✅ Panel updated!",
                     flags: 64
                 });
             }
-        } catch (err) {
-            console.log("⚠️ Reply skipped:", err.message);
-        }
+        } catch {}
 
     } catch (err) {
         console.log("❌ Command error:", err.message);
     }
-
-    // cleanup interaction tracking
-    setTimeout(() => {
-        processedInteractions.delete(interaction.id);
-    }, 10000);
 });
 
 // ===== START =====
