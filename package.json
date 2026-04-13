@@ -7,9 +7,8 @@
   },
   "dependencies": {
     "discord.js": "^14.26.2",
+    "express": "^5.2.1",
     "fetch": "^1.1.0",
-    "mc-server-util": "^1.0.0",
-    "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.34.6"
+    "mc-server-util": "^1.0.0"
   }
 }
