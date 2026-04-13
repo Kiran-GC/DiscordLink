@@ -40,7 +40,10 @@ let updaterInterval = null;
 // ===== GET MC STATUS =====
 async function getStatus() {
     try {
-        const res = await fetch(`https://api.mcsrvstat.us/2/${MC_HOST}:${MC_PORT}`);
+        const res = await fetch(`https://api.mcsrvstat.us/2/${MC_HOST}:${MC_PORT}`, {
+            cache: "no-store"
+        });
+
         const data = await res.json();
 
         if (!data.online) {
@@ -58,36 +61,42 @@ async function getStatus() {
                 `📋 ${players}`
         };
 
-    } catch {
+    } catch (err) {
+        console.log("API error:", err.message);
         return { text: `🔴 **OFFLINE**` };
     }
 }
 
-// ===== UPDATE LOOP =====
+// ===== UPDATE LOOP (FIXED) =====
 function startUpdater() {
     if (updaterInterval) clearInterval(updaterInterval);
 
     updaterInterval = setInterval(async () => {
-        if (!statusMessage) return;
+        console.log("⏱ Running update...");
 
-        const status = await getStatus();
-        const timestamp = Math.floor(Date.now() / 1000);
+        if (!statusMessage) {
+            console.log("⚠️ No message set");
+            return;
+        }
 
         try {
+            const status = await getStatus();
+            const timestamp = Math.floor(Date.now() / 1000);
+
             await statusMessage.edit({
                 content:
                     `📡 **MC Server Status**\n\n` +
                     `${status.text}\n\n` +
                     `⏱ Updated: <t:${timestamp}:F>`
             });
-        } catch (err) {
-            console.log("⚠️ Message missing, stopping updater");
 
-            statusMessage = null;
-            clearInterval(updaterInterval);
+            console.log("✅ Updated successfully");
+
+        } catch (err) {
+            console.log("❌ Update failed:", err.message);
         }
 
-    }, 60000);
+    }, 60000); // 1 minute
 }
 
 // ===== READY =====
@@ -110,13 +119,16 @@ client.on('interactionCreate', async interaction => {
 
         const channel = await client.channels.fetch(CHANNEL_ID);
 
-        // 🔥 DELETE OLD MESSAGE IF EXISTS
-        if (statusMessage) {
-            try {
-                await statusMessage.delete();
-            } catch {
-                // ignore if already deleted
-            }
+        // 🔥 DELETE PREVIOUS BOT MESSAGE (avoid duplicates)
+        const messages = await channel.messages.fetch({ limit: 10 });
+
+        const botMsg = messages.find(msg =>
+            msg.author.id === client.user.id &&
+            msg.content.includes("MC Server Status")
+        );
+
+        if (botMsg) {
+            try { await botMsg.delete(); } catch {}
         }
 
         const status = await getStatus();
@@ -130,7 +142,7 @@ client.on('interactionCreate', async interaction => {
         });
 
         await interaction.reply({
-            content: "✅ Status panel reset!",
+            content: "✅ Status panel created/reset!",
             ephemeral: true
         });
 
@@ -141,7 +153,7 @@ client.on('interactionCreate', async interaction => {
 // ===== START =====
 client.login(DISCORD_TOKEN);
 
-// ===== KEEP ALIVE (Render) =====
+// ===== KEEP ALIVE =====
 require('http').createServer((req, res) => {
     res.end("Bot is alive");
 }).listen(3000);
