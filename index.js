@@ -78,7 +78,7 @@ async function getStatus() {
     }
 }
 
-// ===== MODERN EMBED =====
+// ===== UPDATED EMBED =====
 function buildEmbed(data) {
     const playerList = data.list.length
         ? data.list.slice(0, 10)
@@ -89,7 +89,7 @@ function buildEmbed(data) {
 
     return new EmbedBuilder()
         .setTitle("Adholokham MC (OmniCraft)")
-        .setDescription("Forge-powered OmniCraft experience • Survival • Economy • Community-driven gameplay")
+        .setDescription("Forge-powered OmniCraft experience • Survival • Community-driven gameplay")
 
         .setColor(data.online ? 0x22c55e : 0xef4444)
 
@@ -112,9 +112,14 @@ function buildEmbed(data) {
                 inline: true
             },
             {
-                name: "Join Server",
-                value: "`play.gamerluttan.online`\n`play.adholokham.online`",
-                inline: false
+                name: "Primary IP",
+                value: "`play.gamerluttan.online`",
+                inline: true
+            },
+            {
+                name: "Secondary IP",
+                value: "`play.adholokham.online`",
+                inline: true
             },
             {
                 name: "Players Online",
