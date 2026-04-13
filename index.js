@@ -7,7 +7,7 @@ const CLIENT_ID = process.env.CLIENT_ID; // bot application ID
 const GUILD_ID = process.env.GUILD_ID;   // your server ID
 const CHANNEL_ID = process.env.CHANNEL_ID;
 
-const MC_HOST = "play.adholokham.online";
+const MC_HOST = "pla148.113.0.161";
 const MC_PORT = 25588;
 
 // ===== DISCORD CLIENT =====
