@@ -153,7 +153,7 @@ client.on('ready', async () => {
     }
 });
 
-// ===== COMMAND =====
+// ===== COMMAND (FINAL FIXED FLOW) =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'serverstat') return;
@@ -161,12 +161,14 @@ client.on('interactionCreate', async interaction => {
     if (commandRunning) return;
     commandRunning = true;
 
+    const channel = await client.channels.fetch(CHANNEL_ID);
+
     try {
-        // ✅ MUST BE FIRST
-        await interaction.deferReply({ ephemeral: true });
+        // 🔥 CREATE PANEL FIRST (NO DEPENDENCY ON DISCORD RESPONSE)
+        const data = await getStatus();
+        lastData = data;
 
-        const channel = await client.channels.fetch(CHANNEL_ID);
-
+        // delete old panel
         const savedId = loadPanel();
         if (savedId) {
             try {
@@ -175,33 +177,27 @@ client.on('interactionCreate', async interaction => {
             } catch {}
         }
 
-        const data = await getStatus();
-        lastData = data;
-
         statusMessage = await channel.send({
             embeds: [buildEmbed(data)]
         });
 
         savePanel(statusMessage.id);
 
-        // ⚠️ Even if this fails, updater already has message
+        // 🔥 START UPDATER GUARANTEED
+        startUpdater(channel);
+
+        // 🟡 OPTIONAL INTERACTION RESPONSE
         try {
+            await interaction.deferReply({ ephemeral: true });
             await interaction.editReply({
                 content: "✅ Panel created/reset!"
             });
         } catch (err) {
-            console.log("⚠️ Reply failed:", err.message);
+            console.log("⚠️ Interaction failed (ignored):", err.message);
         }
-
-        // ✅ ALWAYS START
-        startUpdater(channel);
 
     } catch (err) {
-        console.log("❌ Command error:", err.message);
-
-        if (statusMessage) {
-            startUpdater(await client.channels.fetch(CHANNEL_ID));
-        }
+        console.log("❌ Critical command error:", err.message);
     }
 
     setTimeout(() => {
