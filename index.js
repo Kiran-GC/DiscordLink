@@ -40,7 +40,7 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 let statusMessage = null;
 let updaterTimeout = null;
 let lastData = null;
-let commandRunning = false;
+const processedInteractions = new Set();
 
 // ===== SAVE / LOAD =====
 function savePanel(id) {
@@ -93,14 +93,17 @@ function buildEmbed(data) {
         .setTimestamp();
 }
 
-// ===== RELIABLE LOOP =====
+// ===== UPDATER LOOP =====
 function startUpdater(channel) {
-    if (updaterTimeout) clearTimeout(updaterTimeout);
+    if (updaterTimeout) return; // prevent multiple loops
 
     async function loop() {
         console.log("⏱ Checking update...");
 
-        if (!statusMessage) return;
+        if (!statusMessage) {
+            updaterTimeout = null;
+            return;
+        }
 
         try {
             const data = await getStatus();
@@ -127,7 +130,7 @@ function startUpdater(channel) {
         updaterTimeout = setTimeout(loop, 60000);
     }
 
-    loop();
+    updaterTimeout = setTimeout(loop, 60000);
 }
 
 // ===== READY =====
@@ -153,18 +156,21 @@ client.on('ready', async () => {
     }
 });
 
-// ===== COMMAND (FINAL FIXED FLOW) =====
+// ===== COMMAND =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'serverstat') return;
 
-    if (commandRunning) return;
-    commandRunning = true;
+    // 🚫 BLOCK DUPLICATE INTERACTIONS
+    if (processedInteractions.has(interaction.id)) {
+        console.log("⚠️ Duplicate interaction blocked");
+        return;
+    }
+    processedInteractions.add(interaction.id);
 
     const channel = await client.channels.fetch(CHANNEL_ID);
 
     try {
-        // 🔥 CREATE PANEL FIRST (NO DEPENDENCY ON DISCORD RESPONSE)
         const data = await getStatus();
         lastData = data;
 
@@ -177,32 +183,36 @@ client.on('interactionCreate', async interaction => {
             } catch {}
         }
 
-        statusMessage = await channel.send({
+        const newMsg = await channel.send({
             embeds: [buildEmbed(data)]
         });
 
-        savePanel(statusMessage.id);
+        statusMessage = newMsg;
+        savePanel(newMsg.id);
 
-        // 🔥 START UPDATER GUARANTEED
+        // start updater only once
         startUpdater(channel);
 
-        // 🟡 OPTIONAL INTERACTION RESPONSE
+        // safe reply
         try {
-            await interaction.deferReply({ ephemeral: true });
-            await interaction.editReply({
-                content: "✅ Panel created/reset!"
-            });
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: "✅ Panel created/reset!",
+                    flags: 64
+                });
+            }
         } catch (err) {
-            console.log("⚠️ Interaction failed (ignored):", err.message);
+            console.log("⚠️ Reply skipped:", err.message);
         }
 
     } catch (err) {
-        console.log("❌ Critical command error:", err.message);
+        console.log("❌ Command error:", err.message);
     }
 
+    // cleanup interaction tracking
     setTimeout(() => {
-        commandRunning = false;
-    }, 2000);
+        processedInteractions.delete(interaction.id);
+    }, 10000);
 });
 
 // ===== START =====
