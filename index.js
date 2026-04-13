@@ -36,6 +36,7 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 // ===== GLOBAL STATE =====
 let statusMessage = null;
 let updaterInterval = null;
+let isCreatingPanel = false;
 
 // ===== GET MC STATUS =====
 async function getStatus() {
@@ -67,17 +68,17 @@ async function getStatus() {
     }
 }
 
-// ===== UPDATE LOOP (FIXED) =====
+// ===== UPDATE LOOP =====
 function startUpdater() {
-    if (updaterInterval) clearInterval(updaterInterval);
+    if (updaterInterval) {
+        clearInterval(updaterInterval);
+        updaterInterval = null;
+    }
 
     updaterInterval = setInterval(async () => {
         console.log("⏱ Running update...");
 
-        if (!statusMessage) {
-            console.log("⚠️ No message set");
-            return;
-        }
+        if (!statusMessage) return;
 
         try {
             const status = await getStatus();
@@ -90,13 +91,13 @@ function startUpdater() {
                     `⏱ Updated: <t:${timestamp}:F>`
             });
 
-            console.log("✅ Updated successfully");
+            console.log("✅ Updated");
 
         } catch (err) {
             console.log("❌ Update failed:", err.message);
         }
 
-    }, 60000); // 1 minute
+    }, 60000);
 }
 
 // ===== READY =====
@@ -117,18 +118,27 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.commandName === 'serverstat') {
 
+        if (isCreatingPanel) {
+            return interaction.reply({
+                content: "⚠️ Panel is already being created",
+                ephemeral: true
+            });
+        }
+
+        isCreatingPanel = true;
+
         const channel = await client.channels.fetch(CHANNEL_ID);
 
-        // 🔥 DELETE PREVIOUS BOT MESSAGE (avoid duplicates)
-        const messages = await channel.messages.fetch({ limit: 10 });
+        // 🔥 DELETE ALL OLD PANELS
+        const messages = await channel.messages.fetch({ limit: 50 });
 
-        const botMsg = messages.find(msg =>
+        const oldPanels = messages.filter(msg =>
             msg.author.id === client.user.id &&
             msg.content.includes("MC Server Status")
         );
 
-        if (botMsg) {
-            try { await botMsg.delete(); } catch {}
+        for (const msg of oldPanels.values()) {
+            try { await msg.delete(); } catch {}
         }
 
         const status = await getStatus();
@@ -147,6 +157,8 @@ client.on('interactionCreate', async interaction => {
         });
 
         startUpdater();
+
+        isCreatingPanel = false;
     }
 });
 
