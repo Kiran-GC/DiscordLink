@@ -6,7 +6,7 @@ const {
     REST 
 } = require('discord.js');
 
-const mc = require('mc-server-util');
+const fetch = require('node-fetch');
 
 // ===== ENV VARIABLES =====
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -15,8 +15,8 @@ const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
 
 // ===== MC SERVER CONFIG =====
-const MC_HOST = "148.113.0.161";   // e.g. "123.45.67.89"
-const MC_PORT = 25588;               // your actual port
+const MC_HOST = "play.gamerluttan.online"; // your domain
+const MC_PORT = 25588; // your port
 
 // ===== DISCORD CLIENT =====
 const client = new Client({
@@ -36,28 +36,33 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 // ===== GLOBAL STATE =====
 let statusMessage = null;
 
-// ===== GET MC STATUS =====
+// ===== GET MC STATUS (API METHOD) =====
 async function getStatus() {
     try {
-        console.log("Pinging:", MC_HOST, MC_PORT);
+        const res = await fetch(`https://api.mcsrvstat.us/2/${MC_HOST}:${MC_PORT}`);
+        const data = await res.json();
 
-        // ✅ IMPORTANT FIX HERE
-        const res = await mc.statusJava(MC_HOST, MC_PORT);
+        if (!data.online) {
+            return {
+                online: false,
+                text: `🔴 **OFFLINE**`
+            };
+        }
 
-        const players = res.players.sample
-            ? res.players.sample.map(p => p.name).join(", ")
+        const players = data.players && data.players.list
+            ? data.players.list.join(", ")
             : "No players online";
 
         return {
             online: true,
             text:
                 `🟢 **ONLINE**\n` +
-                `👥 ${res.players.online}/${res.players.max}\n` +
+                `👥 ${data.players.online}/${data.players.max}\n` +
                 `📋 ${players}`
         };
 
     } catch (err) {
-        console.error("Ping error:", err.message);
+        console.error("API error:", err.message);
 
         return {
             online: false,
@@ -95,7 +100,7 @@ client.on('ready', async () => {
     console.log("✅ /serverstat registered");
 });
 
-// ===== COMMAND =====
+// ===== COMMAND HANDLER =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -120,7 +125,7 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// ===== START =====
+// ===== START BOT =====
 client.login(DISCORD_TOKEN);
 
 // ===== KEEP ALIVE (Render) =====
