@@ -15,8 +15,8 @@ const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
 
 // ===== MC SERVER CONFIG =====
-const MC_HOST = "play.gamerluttan.online"; // your domain
-const MC_PORT = 25588; // your port
+const MC_HOST = "play.gamerluttan.online";
+const MC_PORT = 25588;
 
 // ===== DISCORD CLIENT =====
 const client = new Client({
@@ -35,18 +35,16 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
 // ===== GLOBAL STATE =====
 let statusMessage = null;
+let updaterInterval = null;
 
-// ===== GET MC STATUS (API METHOD) =====
+// ===== GET MC STATUS =====
 async function getStatus() {
     try {
         const res = await fetch(`https://api.mcsrvstat.us/2/${MC_HOST}:${MC_PORT}`);
         const data = await res.json();
 
         if (!data.online) {
-            return {
-                online: false,
-                text: `🔴 **OFFLINE**`
-            };
+            return { text: `🔴 **OFFLINE**` };
         }
 
         const players = data.players && data.players.list
@@ -54,38 +52,42 @@ async function getStatus() {
             : "No players online";
 
         return {
-            online: true,
             text:
                 `🟢 **ONLINE**\n` +
                 `👥 ${data.players.online}/${data.players.max}\n` +
                 `📋 ${players}`
         };
 
-    } catch (err) {
-        console.error("API error:", err.message);
-
-        return {
-            online: false,
-            text: `🔴 **OFFLINE**`
-        };
+    } catch {
+        return { text: `🔴 **OFFLINE**` };
     }
 }
 
 // ===== UPDATE LOOP =====
 function startUpdater() {
-    setInterval(async () => {
+    if (updaterInterval) clearInterval(updaterInterval);
+
+    updaterInterval = setInterval(async () => {
         if (!statusMessage) return;
 
         const status = await getStatus();
+        const timestamp = Math.floor(Date.now() / 1000);
 
-        await statusMessage.edit({
-            content:
-                `📡 **MC Server Status**\n\n` +
-                `${status.text}\n\n` +
-                `⏱ Updated: <t:${Math.floor(Date.now()/1000)}:R>`
-        });
+        try {
+            await statusMessage.edit({
+                content:
+                    `📡 **MC Server Status**\n\n` +
+                    `${status.text}\n\n` +
+                    `⏱ Updated: <t:${timestamp}:F>`
+            });
+        } catch (err) {
+            console.log("⚠️ Message missing, stopping updater");
 
-    }, 60000); // every 60 sec
+            statusMessage = null;
+            clearInterval(updaterInterval);
+        }
+
+    }, 60000);
 }
 
 // ===== READY =====
@@ -100,24 +102,35 @@ client.on('ready', async () => {
     console.log("✅ /serverstat registered");
 });
 
-// ===== COMMAND HANDLER =====
+// ===== COMMAND =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
     if (interaction.commandName === 'serverstat') {
+
         const channel = await client.channels.fetch(CHANNEL_ID);
 
+        // 🔥 DELETE OLD MESSAGE IF EXISTS
+        if (statusMessage) {
+            try {
+                await statusMessage.delete();
+            } catch {
+                // ignore if already deleted
+            }
+        }
+
         const status = await getStatus();
+        const timestamp = Math.floor(Date.now() / 1000);
 
         statusMessage = await channel.send({
             content:
                 `📡 **MC Server Status**\n\n` +
                 `${status.text}\n\n` +
-                `⏱ Initializing...`
+                `⏱ Updated: <t:${timestamp}:F>`
         });
 
         await interaction.reply({
-            content: "✅ Status panel created!",
+            content: "✅ Status panel reset!",
             ephemeral: true
         });
 
@@ -125,7 +138,7 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// ===== START BOT =====
+// ===== START =====
 client.login(DISCORD_TOKEN);
 
 // ===== KEEP ALIVE (Render) =====
