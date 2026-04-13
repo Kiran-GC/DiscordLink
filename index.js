@@ -9,7 +9,7 @@ const {
     AttachmentBuilder
 } = require('discord.js');
 
-const fetch = require('node-fetch');
+const res = await fetch(url);
 const fs = require('fs');
 const express = require('express');
 
