@@ -78,23 +78,62 @@ async function getStatus() {
     }
 }
 
-// ===== EMBED =====
+// ===== EMBED (NEW DESIGN) =====
 function buildEmbed(data) {
+    const uptime = "Unknown";
+
+    const playerList = data.list.length
+        ? data.list.map(p => `• ${p}`).join("\n")
+        : "No players online";
+
     return new EmbedBuilder()
-        .setTitle("📡 MC Server Status")
-        .setColor(data.online ? 0x00ff00 : 0xff0000)
+        .setTitle("Adholokham MC (OmniCraft)")
+        .setDescription("The ultimate Minecraft experience where your story begins.")
+        .setColor(data.online ? 0x00ff88 : 0xff3b3b)
+
+        .setThumbnail("https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png")
+
         .addFields(
-            { name: "Status", value: data.online ? "🟢 Online" : "🔴 Offline", inline: true },
-            { name: "Players", value: `${data.players}/${data.max}`, inline: true },
-            { name: "Version", value: data.version, inline: true },
-            { name: "Player List", value: data.list.length ? data.list.join(", ") : "No players" }
+            {
+                name: "┃ STATUS",
+                value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``,
+                inline: true
+            },
+            {
+                name: "┃ PLAYERS",
+                value: `\`\`\`${data.players}/${data.max}\`\`\``,
+                inline: true
+            },
+            {
+                name: "┃ UPTIME",
+                value: `\`\`\`${uptime}\`\`\``,
+                inline: true
+            },
+            {
+                name: "┃ IP",
+                value:
+`\`\`\`
+play.gamerluttan.online
+play.adholokham.online
+\`\`\``,
+                inline: true
+            },
+            {
+                name: "┃ PLAYER LIST",
+                value: `\`\`\`\n${playerList}\n\`\`\``,
+                inline: false
+            }
         )
+
+        .setFooter({
+            text: "Watcher v1 • Updated every minute"
+        })
         .setTimestamp();
 }
 
 // ===== UPDATER LOOP =====
 function startUpdater(channel) {
-    if (updaterTimeout) return; // prevent multiple loops
+    if (updaterTimeout) return;
 
     async function loop() {
         console.log("⏱ Checking update...");
@@ -169,7 +208,6 @@ client.on('interactionCreate', async interaction => {
         let msg = null;
         const savedId = loadPanel();
 
-        // 🔁 Try reuse existing panel
         if (savedId) {
             try {
                 msg = await channel.messages.fetch(savedId);
@@ -179,16 +217,14 @@ client.on('interactionCreate', async interaction => {
         }
 
         if (msg) {
-            // ♻️ Update existing panel
             await msg.edit({
                 embeds: [buildEmbed(data)]
             });
 
             statusMessage = msg;
-            console.log("♻️ Reused existing panel");
+            console.log("♻️ Reused panel");
 
         } else {
-            // 🆕 Create new panel
             msg = await channel.send({
                 embeds: [buildEmbed(data)]
             });
@@ -196,13 +232,11 @@ client.on('interactionCreate', async interaction => {
             statusMessage = msg;
             savePanel(msg.id);
 
-            console.log("🆕 Created new panel");
+            console.log("🆕 Created panel");
         }
 
-        // 🔁 Start updater
         startUpdater(channel);
 
-        // Safe reply
         try {
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
