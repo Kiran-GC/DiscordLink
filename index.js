@@ -1,36 +1,46 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, Routes, REST } = require('discord.js');
+const { 
+    Client, 
+    GatewayIntentBits, 
+    SlashCommandBuilder, 
+    Routes, 
+    REST 
+} = require('discord.js');
+
 const mc = require('mc-server-util');
 
-// ===== CONFIG =====
+// ===== ENV VARIABLES =====
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID; // bot application ID
-const GUILD_ID = process.env.GUILD_ID;   // your server ID
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
 
-const MC_HOST = "pla148.113.0.161";
-const MC_PORT = 25588;
+// ===== MC SERVER CONFIG =====
+const MC_HOST = "play.gamerluttan.online"; // CHANGE if needed
+const MC_PORT = 25588; // IMPORTANT: your actual port
 
 // ===== DISCORD CLIENT =====
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
 
-// ===== REGISTER SLASH COMMAND =====
+// ===== SLASH COMMAND =====
 const commands = [
     new SlashCommandBuilder()
-        .setName('status')
+        .setName('serverstat')
         .setDescription('Start live MC server status panel')
         .toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
-// ===== VARIABLES =====
+// ===== GLOBAL STATE =====
 let statusMessage = null;
 
-// ===== FUNCTION: GET STATUS =====
+// ===== GET MC STATUS =====
 async function getStatus() {
     try {
+        console.log("Pinging:", MC_HOST, MC_PORT);
+
         const res = await mc.status(MC_HOST, MC_PORT);
 
         const players = res.players.sample
@@ -44,7 +54,10 @@ async function getStatus() {
                 `👥 ${res.players.online}/${res.players.max}\n` +
                 `📋 ${players}`
         };
-    } catch {
+
+    } catch (err) {
+        console.error("Ping error:", err.message);
+
         return {
             online: false,
             text: `🔴 **OFFLINE**`
@@ -52,8 +65,8 @@ async function getStatus() {
     }
 }
 
-// ===== FUNCTION: LOOP UPDATE =====
-async function startUpdater(channel) {
+// ===== UPDATE LOOP =====
+function startUpdater() {
     setInterval(async () => {
         if (!statusMessage) return;
 
@@ -61,7 +74,9 @@ async function startUpdater(channel) {
 
         await statusMessage.edit({
             content:
-                `📡 **MC Server Status**\n\n${status.text}\n\n⏱ Updated: <t:${Math.floor(Date.now()/1000)}:R>`
+                `📡 **MC Server Status**\n\n` +
+                `${status.text}\n\n` +
+                `⏱ Updated: <t:${Math.floor(Date.now()/1000)}:R>`
         });
 
     }, 60000); // every 60 sec
@@ -71,27 +86,29 @@ async function startUpdater(channel) {
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
-    // Register slash command (guild only = instant)
+    // Register slash command
     await rest.put(
         Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
         { body: commands }
     );
 
-    console.log("✅ Slash command registered");
+    console.log("✅ /serverstat registered");
 });
 
-// ===== HANDLE COMMAND =====
+// ===== COMMAND HANDLER =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
-    if (interaction.commandName === 'status') {
+    if (interaction.commandName === 'serverstat') {
         const channel = await client.channels.fetch(CHANNEL_ID);
 
         const status = await getStatus();
 
         statusMessage = await channel.send({
             content:
-                `📡 **MC Server Status**\n\n${status.text}\n\n⏱ Initializing...`
+                `📡 **MC Server Status**\n\n` +
+                `${status.text}\n\n` +
+                `⏱ Initializing...`
         });
 
         await interaction.reply({
@@ -99,14 +116,14 @@ client.on('interactionCreate', async interaction => {
             ephemeral: true
         });
 
-        startUpdater(channel);
+        startUpdater();
     }
 });
 
-// ===== START =====
+// ===== START BOT =====
 client.login(DISCORD_TOKEN);
 
 // ===== KEEP ALIVE (Render) =====
 require('http').createServer((req, res) => {
-    res.end("Bot alive");
+    res.end("Bot is alive");
 }).listen(3000);
