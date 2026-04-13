@@ -167,6 +167,8 @@ function startUpdater(channel) {
     if (updaterTimeout) return;
 
     async function loop() {
+        console.log("⏱ Checking update...");
+
         if (!statusMessage) return;
 
         try {
@@ -175,13 +177,17 @@ function startUpdater(channel) {
             if (
                 !lastData ||
                 data.online !== lastData.online ||
-                data.players !== lastData.players
+                data.players !== lastData.players ||
+                data.max !== lastData.max
             ) {
                 lastData = data;
                 await statusMessage.edit({ embeds: [buildEmbed(data)] });
+                console.log("✅ Updated");
             }
 
-        } catch {}
+        } catch (err) {
+            console.log("❌ Update error:", err.message);
+        }
 
         updaterTimeout = setTimeout(loop, 60000);
     }
@@ -189,7 +195,7 @@ function startUpdater(channel) {
     updaterTimeout = setTimeout(loop, 60000);
 }
 
-// ===== READY =====
+// ===== READY (FIXED RECOVERY) =====
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
@@ -203,11 +209,42 @@ client.on('ready', async () => {
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
 
+    let restored = false;
+
+    // Try ID
     if (savedId) {
         try {
-            statusMessage = await channel.messages.fetch(savedId);
-            startUpdater(channel);
-        } catch {}
+            const msg = await channel.messages.fetch(savedId);
+            statusMessage = msg;
+            restored = true;
+            console.log("🔁 Restored via ID");
+        } catch {
+            console.log("⚠️ ID restore failed");
+        }
+    }
+
+    // Fallback via title
+    if (!restored) {
+        const messages = await channel.messages.fetch({ limit: 50 });
+
+        const panel = messages.find(msg =>
+            msg.author.id === client.user.id &&
+            msg.embeds.length > 0 &&
+            msg.embeds[0]?.title?.includes("Adholokham MC")
+        );
+
+        if (panel) {
+            statusMessage = panel;
+            savePanel(panel.id);
+            restored = true;
+            console.log("🔍 Recovered via title");
+        }
+    }
+
+    if (statusMessage) {
+        startUpdater(channel);
+    } else {
+        console.log("⚠️ No panel found");
     }
 });
 
@@ -217,7 +254,7 @@ client.on('interactionCreate', async interaction => {
 
     if (!hasAccess(interaction)) {
         return interaction.reply({
-            content: "❌ You don’t have permission to use this command.",
+            content: "❌ You don’t have permission.",
             ephemeral: true
         });
     }
