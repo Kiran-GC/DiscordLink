@@ -5,7 +5,8 @@ const {
     Routes, 
     REST,
     EmbedBuilder,
-    ActivityType
+    ActivityType,
+    AttachmentBuilder
 } = require('discord.js');
 
 const fetch = require('node-fetch');
@@ -123,16 +124,14 @@ function buildEmbed(data) {
         .setTimestamp();
 }
 
-// ===== SIMPLE EMBED (/mcsrv UPDATED) =====
+// ===== SIMPLE EMBED =====
 function buildSimpleEmbed(data, ip) {
     const playerList = data.list.length
-        ? data.list.slice(0, 10)
-            .map(p => `• ${p}`)
-            .join("\n") +
+        ? data.list.slice(0, 10).map(p => `• ${p}`).join("\n") +
           (data.list.length > 10 ? `\n+ ${data.list.length - 10} more...` : "")
         : "No players online";
 
-    const embed = new EmbedBuilder()
+    return new EmbedBuilder()
         .setTitle(`Server Check: ${ip}`)
         .setColor(data.online ? 0x22c55e : 0xef4444)
 
@@ -145,13 +144,6 @@ function buildSimpleEmbed(data, ip) {
 
         .setFooter({ text: "Watcher v1 • Quick Check" })
         .setTimestamp();
-
-    // Add server icon if available
-    if (data.icon) {
-        embed.setThumbnail(data.icon);
-    }
-
-    return embed;
 }
 
 // ===== ROTATING STATUS =====
@@ -211,32 +203,12 @@ client.on('ready', async () => {
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
 
-    let restored = false;
-
     if (savedId) {
         try {
-            const msg = await channel.messages.fetch(savedId);
-            statusMessage = msg;
-            restored = true;
+            statusMessage = await channel.messages.fetch(savedId);
+            startUpdater(channel);
         } catch {}
     }
-
-    if (!restored) {
-        const messages = await channel.messages.fetch({ limit: 50 });
-
-        const panel = messages.find(msg =>
-            msg.author.id === client.user.id &&
-            msg.embeds.length > 0 &&
-            msg.embeds[0].title === "Adholokham MC (OmniCraft)"
-        );
-
-        if (panel) {
-            statusMessage = panel;
-            savePanel(panel.id);
-        }
-    }
-
-    if (statusMessage) startUpdater(channel);
 });
 
 // ===== COMMAND HANDLER =====
@@ -281,14 +253,30 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ content: "✅ Panel updated!", ephemeral: true });
         }
 
-        // ===== SIMPLE LOOKUP =====
+        // ===== MCSRV =====
         if (interaction.commandName === 'mcsrv') {
 
             const ip = interaction.options.getString('ip');
             const data = await getStatus(ip);
 
+            const embed = buildSimpleEmbed(data, ip);
+            let files = [];
+
+            if (data.icon && data.icon.startsWith("data:image")) {
+                const base64 = data.icon.split(",")[1];
+                const buffer = Buffer.from(base64, "base64");
+
+                const attachment = new AttachmentBuilder(buffer, { name: "icon.png" });
+                files.push(attachment);
+
+                embed.setThumbnail("attachment://icon.png");
+            } else if (data.icon) {
+                embed.setThumbnail(data.icon);
+            }
+
             return interaction.reply({
-                embeds: [buildSimpleEmbed(data, ip)]
+                embeds: [embed],
+                files
             });
         }
 
