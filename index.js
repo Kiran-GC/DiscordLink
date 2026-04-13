@@ -15,8 +15,8 @@ const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
 
 // ===== MC SERVER CONFIG =====
-const MC_HOST = "148.113.0.161"; // CHANGE if needed
-const MC_PORT = 25588; // IMPORTANT: your actual port
+const MC_HOST = "148.113.0.161";   // e.g. "123.45.67.89"
+const MC_PORT = 25588;               // your actual port
 
 // ===== DISCORD CLIENT =====
 const client = new Client({
@@ -41,7 +41,8 @@ async function getStatus() {
     try {
         console.log("Pinging:", MC_HOST, MC_PORT);
 
-        const res = await mc.status(MC_HOST, MC_PORT);
+        // ✅ IMPORTANT FIX HERE
+        const res = await mc.statusJava(MC_HOST, MC_PORT);
 
         const players = res.players.sample
             ? res.players.sample.map(p => p.name).join(", ")
@@ -86,7 +87,6 @@ function startUpdater() {
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
-    // Register slash command
     await rest.put(
         Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
         { body: commands }
@@ -95,7 +95,7 @@ client.on('ready', async () => {
     console.log("✅ /serverstat registered");
 });
 
-// ===== COMMAND HANDLER =====
+// ===== COMMAND =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -120,7 +120,7 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// ===== START BOT =====
+// ===== START =====
 client.login(DISCORD_TOKEN);
 
 // ===== KEEP ALIVE (Render) =====
