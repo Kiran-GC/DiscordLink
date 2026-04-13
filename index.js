@@ -108,12 +108,21 @@ function startUpdater(channel) {
     if (updaterInterval) clearInterval(updaterInterval);
 
     updaterInterval = setInterval(async () => {
+        console.log("⏱ Checking update...");
+
         if (!statusMessage) return;
 
         const data = await getStatus();
 
-        // 🧠 SMART UPDATE (only if changed)
-        if (JSON.stringify(data) === JSON.stringify(lastData)) {
+        console.log("Players:", data.players);
+
+        // ✅ SMART CHECK (fixed)
+        if (
+            lastData &&
+            data.online === lastData.online &&
+            data.players === lastData.players &&
+            data.max === lastData.max
+        ) {
             return;
         }
 
@@ -124,7 +133,7 @@ function startUpdater(channel) {
                 embeds: [buildEmbed(data)]
             });
 
-            console.log("✅ Updated (changed)");
+            console.log("✅ Updated");
 
         } catch (err) {
             console.log("❌ Message lost, stopping updater");
@@ -146,14 +155,13 @@ client.on('ready', async () => {
 
     console.log("✅ Command registered");
 
-    // 🔁 RESTORE PANEL AFTER RESTART
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
 
     if (savedId) {
         try {
             statusMessage = await channel.messages.fetch(savedId);
-            console.log("🔁 Restored existing panel");
+            console.log("🔁 Restored panel");
             startUpdater(channel);
         } catch {
             console.log("⚠️ Saved panel not found");
@@ -169,16 +177,14 @@ client.on('interactionCreate', async interaction => {
 
         const channel = await client.channels.fetch(CHANNEL_ID);
 
-        // delete old panels
-        const messages = await channel.messages.fetch({ limit: 50 });
+        // ✅ DELETE ONLY SAVED PANEL
+        const savedId = loadPanel();
 
-        const oldPanels = messages.filter(msg =>
-            msg.author.id === client.user.id &&
-            msg.embeds.length > 0
-        );
-
-        for (const msg of oldPanels.values()) {
-            try { await msg.delete(); } catch {}
+        if (savedId) {
+            try {
+                const oldMsg = await channel.messages.fetch(savedId);
+                await oldMsg.delete();
+            } catch {}
         }
 
         const data = await getStatus();
@@ -191,7 +197,7 @@ client.on('interactionCreate', async interaction => {
         savePanel(statusMessage.id);
 
         await interaction.reply({
-            content: "✅ Panel created!",
+            content: "✅ Panel created/reset!",
             ephemeral: true
         });
 
