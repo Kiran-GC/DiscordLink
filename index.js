@@ -12,7 +12,7 @@ const {
 const fs = require('fs');
 const express = require('express');
 
-// ✅ SAFE FETCH (works on all Node versions)
+// ✅ SAFE FETCH
 const fetch = global.fetch || ((...args) =>
     import('node-fetch').then(({ default: fetch }) => fetch(...args))
 );
@@ -23,6 +23,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
 const ALLOWED_ROLE_ID = process.env.ALLOWED_ROLE_ID;
+const NOTIFY_ROLE_ID = process.env.NOTIFY_ROLE_ID;
 
 const MC_HOST = "play.gamerluttan.online";
 const MC_PORT = 25588;
@@ -40,7 +41,7 @@ app.listen(3000, () => {
     console.log("🌐 Keep-alive server running");
 });
 
-// ✅ Internal ping (safe + logs)
+// Internal ping
 setInterval(() => {
     fetch("http://localhost:3000")
         .then(() => console.log("🔁 Internal ping"))
@@ -136,13 +137,10 @@ function buildEmbed(data) {
             { name: "📡 Status", value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``, inline: true },
             { name: "👥 Players", value: `\`\`\`${data.players} / ${data.max}\`\`\``, inline: true },
             { name: "⚙️ Version", value: `\`\`\`${data.version}\`\`\``, inline: true },
-
             { name: "🌐 Primary IP", value: "```play.gamerluttan.online```", inline: false },
             { name: "🌐 Secondary IP", value: "```play.adholokham.online```", inline: false },
-
             { name: "👥 Players Online", value: `\`\`\`\n${playerList}\n\`\`\``, inline: false }
         )
-
         .setFooter({ text: "Watcher v1 • Live Status" })
         .setTimestamp();
 }
@@ -157,19 +155,17 @@ function buildSimpleEmbed(data, ip) {
     return new EmbedBuilder()
         .setTitle(`Server Check: ${ip}`)
         .setColor(data.online ? 0x22c55e : 0xef4444)
-
         .addFields(
             { name: "📡 Status", value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``, inline: true },
             { name: "👥 Players", value: `\`\`\`${data.players} / ${data.max}\`\`\``, inline: true },
             { name: "⚙️ Version", value: `\`\`\`${data.version}\`\`\``, inline: true },
             { name: "👥 Players Online", value: `\`\`\`\n${playerList}\n\`\`\``, inline: false }
         )
-
         .setFooter({ text: "Watcher v1 • Quick Check" })
         .setTimestamp();
 }
 
-// ===== DYNAMIC PRESENCE =====
+// ===== PRESENCE =====
 async function dynamicPresence() {
     try {
         const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
@@ -210,7 +206,31 @@ function startUpdater(channel) {
                 data.online !== lastData.online ||
                 data.max !== lastData.max
             ) {
+
+                // 🔴 OFFLINE ALERT
+                if (lastData !== null && lastData.online && !data.online) {
+                    console.log("🚨 Server went OFFLINE");
+
+                    if (NOTIFY_ROLE_ID) {
+                        channel.send({
+                            content: `<@&${NOTIFY_ROLE_ID}> 🚨 Server is OFFLINE!`
+                        }).catch(() => {});
+                    }
+                }
+
+                // 🟢 ONLINE ALERT
+                if (lastData !== null && !lastData.online && data.online) {
+                    console.log("🟢 Server back ONLINE");
+
+                    if (NOTIFY_ROLE_ID) {
+                        channel.send({
+                            content: `<@&${NOTIFY_ROLE_ID}> ✅ Server is back ONLINE!`
+                        }).catch(() => {});
+                    }
+                }
+
                 lastData = data;
+
                 await statusMessage.edit({ embeds: [buildEmbed(data)] });
                 console.log("✅ Updated");
             }
