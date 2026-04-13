@@ -1,3 +1,4 @@
+console.log("TOKEN VALUE:", process.env.DISCORD_TOKEN);
 const { Client, GatewayIntentBits, SlashCommandBuilder, Routes, REST } = require('discord.js');
 const mc = require('mc-server-util');
 
