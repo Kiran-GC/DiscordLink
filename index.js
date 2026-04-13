@@ -15,7 +15,7 @@ const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
 
 // ===== MC SERVER CONFIG =====
-const MC_HOST = "play.gamerluttan.online"; // CHANGE if needed
+const MC_HOST = "148.113.0.161"; // CHANGE if needed
 const MC_PORT = 25588; // IMPORTANT: your actual port
 
 // ===== DISCORD CLIENT =====
