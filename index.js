@@ -146,21 +146,45 @@ function buildSimpleEmbed(data, ip) {
         .setTimestamp();
 }
 
-// ===== ROTATING STATUS =====
-function startPresenceRotation() {
-    const statuses = [
-        { name: "OmniCraft", type: ActivityType.Playing },
-        { name: "MC Server", type: ActivityType.Watching },
-        { name: "Players Online", type: ActivityType.Listening }
-    ];
+// ===== DYNAMIC PRESENCE =====
+async function dynamicPresence() {
+    try {
+        const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
 
-    let i = 0;
+        const activities = [];
 
-    setInterval(() => {
-        client.user.setActivity(statuses[i]);
-        i = (i + 1) % statuses.length;
-    }, 20000);
+        activities.push({
+            name: `${data.players}/${data.max} players online`,
+            type: ActivityType.Watching
+        });
+
+        activities.push({
+            name: data.online ? "Server Online" : "Server Offline",
+            type: ActivityType.Watching
+        });
+
+        if (data.version) {
+            activities.push({
+                name: `Forge ${data.version}`,
+                type: ActivityType.Playing
+            });
+        }
+
+        activities.push({
+            name: "play.gamerluttan.online",
+            type: ActivityType.Playing
+        });
+
+        const activity = activities[Math.floor(Math.random() * activities.length)];
+        client.user.setActivity(activity);
+
+    } catch (err) {
+        console.log("Presence error:", err.message);
+    }
 }
+
+// Run presence every 20 sec
+setInterval(dynamicPresence, 20000);
 
 // ===== UPDATER =====
 function startUpdater(channel) {
@@ -195,7 +219,7 @@ function startUpdater(channel) {
     updaterTimeout = setTimeout(loop, 60000);
 }
 
-// ===== READY (FIXED RECOVERY) =====
+// ===== READY =====
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
@@ -204,26 +228,22 @@ client.on('ready', async () => {
         { body: commands }
     );
 
-    startPresenceRotation();
+    dynamicPresence();
 
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
 
     let restored = false;
 
-    // Try ID
     if (savedId) {
         try {
             const msg = await channel.messages.fetch(savedId);
             statusMessage = msg;
             restored = true;
             console.log("🔁 Restored via ID");
-        } catch {
-            console.log("⚠️ ID restore failed");
-        }
+        } catch {}
     }
 
-    // Fallback via title
     if (!restored) {
         const messages = await channel.messages.fetch({ limit: 50 });
 
@@ -236,16 +256,11 @@ client.on('ready', async () => {
         if (panel) {
             statusMessage = panel;
             savePanel(panel.id);
-            restored = true;
             console.log("🔍 Recovered via title");
         }
     }
 
-    if (statusMessage) {
-        startUpdater(channel);
-    } else {
-        console.log("⚠️ No panel found");
-    }
+    if (statusMessage) startUpdater(channel);
 });
 
 // ===== COMMAND HANDLER =====
