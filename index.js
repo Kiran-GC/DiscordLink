@@ -1,81 +1,112 @@
-// ===== IMPORTS =====
-const { Client, GatewayIntentBits } = require('discord.js');
-const { Client: WAClient, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const { Client, GatewayIntentBits, SlashCommandBuilder, Routes, REST } = require('discord.js');
+const mc = require('mc-server-util');
 
-// ===== ENV VARIABLES =====
+// ===== CONFIG =====
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID; // bot application ID
+const GUILD_ID = process.env.GUILD_ID;   // your server ID
 const CHANNEL_ID = process.env.CHANNEL_ID;
-const WHATSAPP_NUMBER = process.env.WHATSAPP_NUMBER;
+
+const MC_HOST = "play.adholokham.online";
+const MC_PORT = 25588;
 
 // ===== DISCORD CLIENT =====
-const discord = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds]
 });
 
-// ===== WHATSAPP CLIENT =====
-const wa = new WAClient({
-    authStrategy: new LocalAuth()
-});
+// ===== REGISTER SLASH COMMAND =====
+const commands = [
+    new SlashCommandBuilder()
+        .setName('status')
+        .setDescription('Start live MC server status panel')
+        .toJSON()
+];
 
-// ===== WHATSAPP QR =====
-wa.on('qr', qr => {
-    console.log("Scan this QR with WhatsApp:");
-    qrcode.generate(qr, { small: true });
-});
+const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
-// ===== WHATSAPP READY =====
-wa.on('ready', () => {
-    console.log("✅ WhatsApp is ready!");
-});
+// ===== VARIABLES =====
+let statusMessage = null;
 
-// ===== DISCORD LISTENER =====
-discord.on('messageCreate', async (message) => {
+// ===== FUNCTION: GET STATUS =====
+async function getStatus() {
     try {
-        // Ignore bots (VERY IMPORTANT)
-        if (message.author.bot) return;
+        const res = await mc.status(MC_HOST, MC_PORT);
 
-        // Only listen to your specific channel
-        if (message.channel.id !== CHANNEL_ID) return;
+        const players = res.players.sample
+            ? res.players.sample.map(p => p.name).join(", ")
+            : "No players online";
 
-        let content = message.content;
+        return {
+            online: true,
+            text:
+                `🟢 **ONLINE**\n` +
+                `👥 ${res.players.online}/${res.players.max}\n` +
+                `📋 ${players}`
+        };
+    } catch {
+        return {
+            online: false,
+            text: `🔴 **OFFLINE**`
+        };
+    }
+}
 
-        // Handle embeds (common for plugins)
-        if (!content && message.embeds.length > 0) {
-            const embed = message.embeds[0];
-            content = embed.description || embed.title || "MC Event";
-        }
+// ===== FUNCTION: LOOP UPDATE =====
+async function startUpdater(channel) {
+    setInterval(async () => {
+        if (!statusMessage) return;
 
-        if (!content) return;
+        const status = await getStatus();
 
-        // Filter only important events
-        const keywords = ["Started", "Stopping", "Restart"];
-        const isRelevant = keywords.some(k => content.includes(k));
+        await statusMessage.edit({
+            content:
+                `📡 **MC Server Status**\n\n${status.text}\n\n⏱ Updated: <t:${Math.floor(Date.now()/1000)}:R>`
+        });
 
-        if (!isRelevant) return;
+    }, 60000); // every 60 sec
+}
 
-        console.log("📩 Forwarding:", content);
+// ===== READY =====
+client.on('ready', async () => {
+    console.log(`✅ Logged in as ${client.user.tag}`);
 
-        // Send to WhatsApp (DM or Group)
-        await wa.sendMessage(
-            WHATSAPP_NUMBER,
-            `📡 MC Server Update:\n${content}`
-        );
+    // Register slash command (guild only = instant)
+    await rest.put(
+        Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+        { body: commands }
+    );
 
-    } catch (err) {
-        console.error("❌ Error:", err);
+    console.log("✅ Slash command registered");
+});
+
+// ===== HANDLE COMMAND =====
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === 'status') {
+        const channel = await client.channels.fetch(CHANNEL_ID);
+
+        const status = await getStatus();
+
+        statusMessage = await channel.send({
+            content:
+                `📡 **MC Server Status**\n\n${status.text}\n\n⏱ Initializing...`
+        });
+
+        await interaction.reply({
+            content: "✅ Status panel created!",
+            ephemeral: true
+        });
+
+        startUpdater(channel);
     }
 });
 
-// ===== LOGIN =====
-discord.login(DISCORD_TOKEN);
-wa.initialize();
+// ===== START =====
+client.login(DISCORD_TOKEN);
 
-// ===== KEEP-ALIVE SERVER (FOR RENDER) =====
+// ===== KEEP ALIVE (Render) =====
 require('http').createServer((req, res) => {
-    res.end("Bot is alive");
+    res.end("Bot alive");
 }).listen(3000);
