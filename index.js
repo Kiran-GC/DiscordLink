@@ -40,6 +40,7 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 let statusMessage = null;
 let updaterInterval = null;
 let lastData = null;
+let commandRunning = false; // 🔥 prevents double execution
 
 // ===== SAVE / LOAD =====
 function savePanel(id) {
@@ -114,9 +115,7 @@ function startUpdater(channel) {
 
         const data = await getStatus();
 
-        console.log("Players:", data.players);
-
-        // ✅ Smart comparison
+        // Smart comparison
         if (
             lastData &&
             data.online === lastData.online &&
@@ -175,35 +174,51 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.commandName === 'serverstat') {
 
-        // ✅ Prevent timeout
-        await interaction.deferReply({ ephemeral: true });
-
-        const channel = await client.channels.fetch(CHANNEL_ID);
-
-        // ✅ Delete ONLY saved panel safely
-        const savedId = loadPanel();
-
-        if (savedId) {
-            try {
-                const oldMsg = await channel.messages.fetch(savedId);
-                if (oldMsg) await oldMsg.delete();
-            } catch {}
+        // 🚫 Prevent duplicate execution
+        if (commandRunning) {
+            console.log("⚠️ Duplicate command blocked");
+            return;
         }
 
-        const data = await getStatus();
-        lastData = data;
+        commandRunning = true;
 
-        statusMessage = await channel.send({
-            embeds: [buildEmbed(data)]
-        });
+        try {
+            await interaction.deferReply({ ephemeral: true });
 
-        savePanel(statusMessage.id);
+            const channel = await client.channels.fetch(CHANNEL_ID);
 
-        await interaction.editReply({
-            content: "✅ Panel created/reset!"
-        });
+            // (Optional: safe delete of saved panel)
+            const savedId = loadPanel();
+            if (savedId) {
+                try {
+                    const oldMsg = await channel.messages.fetch(savedId);
+                    if (oldMsg) await oldMsg.delete();
+                } catch {}
+            }
 
-        startUpdater(channel);
+            const data = await getStatus();
+            lastData = data;
+
+            statusMessage = await channel.send({
+                embeds: [buildEmbed(data)]
+            });
+
+            savePanel(statusMessage.id);
+
+            await interaction.editReply({
+                content: "✅ Panel created/reset!"
+            });
+
+            startUpdater(channel);
+
+        } catch (err) {
+            console.log("❌ Command error:", err);
+        }
+
+        // 🔓 Release lock
+        setTimeout(() => {
+            commandRunning = false;
+        }, 2000);
     }
 });
 
