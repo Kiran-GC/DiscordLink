@@ -4,7 +4,8 @@ const {
     SlashCommandBuilder, 
     Routes, 
     REST,
-    EmbedBuilder
+    EmbedBuilder,
+    ActivityType
 } = require('discord.js');
 
 const fetch = require('node-fetch');
@@ -15,6 +16,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
+const ALLOWED_ROLE_ID = process.env.ALLOWED_ROLE_ID;
 
 const MC_HOST = "play.gamerluttan.online";
 const MC_PORT = 25588;
@@ -26,13 +28,21 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
 
-// ===== COMMAND =====
+// ===== COMMANDS =====
 const commands = [
     new SlashCommandBuilder()
         .setName('serverstat')
-        .setDescription('Create or update MC status panel')
-        .toJSON()
-];
+        .setDescription('Create or update MC status panel'),
+
+    new SlashCommandBuilder()
+        .setName('mcsrv')
+        .setDescription('Check any Minecraft server')
+        .addStringOption(opt =>
+            opt.setName('ip')
+                .setDescription('Server IP (with optional port)')
+                .setRequired(true)
+        )
+].map(c => c.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
@@ -51,10 +61,15 @@ function loadPanel() {
     return JSON.parse(fs.readFileSync(SAVE_FILE)).id;
 }
 
+// ===== PERMISSION =====
+function hasAccess(interaction) {
+    return interaction.member.roles.cache.has(ALLOWED_ROLE_ID);
+}
+
 // ===== FETCH STATUS =====
-async function getStatus() {
+async function getStatus(ip) {
     try {
-        const res = await fetch(`https://api.mcsrvstat.us/2/${MC_HOST}:${MC_PORT}`, {
+        const res = await fetch(`https://api.mcsrvstat.us/2/${ip}`, {
             cache: "no-store"
         });
         const data = await res.json();
@@ -78,12 +93,10 @@ async function getStatus() {
     }
 }
 
-// ===== EMBED (FINAL UI FIXED) =====
+// ===== MAIN EMBED =====
 function buildEmbed(data) {
     const playerList = data.list.length
-        ? data.list.slice(0, 10)
-            .map(p => `• ${p}`)
-            .join("\n") +
+        ? data.list.slice(0, 10).map(p => `• ${p}`).join("\n") +
           (data.list.length > 10 ? `\n+ ${data.list.length - 10} more...` : "")
         : "No players online";
 
@@ -94,80 +107,77 @@ function buildEmbed(data) {
         .setThumbnail("https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png")
 
         .addFields(
-            {
-                name: "📡 Status",
-                value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``,
-                inline: true
-            },
-            {
-                name: "👥 Players",
-                value: `\`\`\`${data.players} / ${data.max}\`\`\``,
-                inline: true
-            },
-            {
-                name: "⚙️ Version",
-                value: `\`\`\`${data.version}\`\`\``,
-                inline: true
-            },
+            { name: "📡 Status", value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``, inline: true },
+            { name: "👥 Players", value: `\`\`\`${data.players} / ${data.max}\`\`\``, inline: true },
+            { name: "⚙️ Version", value: `\`\`\`${data.version}\`\`\``, inline: true },
 
-            // 🔥 FULL WIDTH → NO WRAP
-            {
-                name: "🌐 Primary IP",
-                value: "```play.gamerluttan.online```",
-                inline: false
-            },
-            {
-                name: "🌐 Secondary IP",
-                value: "```play.adholokham.online```",
-                inline: false
-            },
+            { name: "🌐 Primary IP", value: "```play.gamerluttan.online```", inline: false },
+            { name: "🌐 Secondary IP", value: "```play.adholokham.online```", inline: false },
 
-            {
-                name: "👥 Players Online",
-                value: `\`\`\`\n${playerList}\n\`\`\``,
-                inline: false
-            }
+            { name: "👥 Players Online", value: `\`\`\`\n${playerList}\n\`\`\``, inline: false }
         )
 
-        .setFooter({
-            text: "Watcher v1 • Live Status"
-        })
+        .setFooter({ text: "Watcher v1 • Live Status" })
         .setTimestamp();
 }
 
-// ===== UPDATER LOOP =====
+// ===== SIMPLE EMBED (/mcsrv) =====
+function buildSimpleEmbed(data, ip) {
+    const playerList = data.list.length
+        ? data.list.slice(0, 10).map(p => `• ${p}`).join("\n")
+        : "No players online";
+
+    return new EmbedBuilder()
+        .setTitle(`Server Check: ${ip}`)
+        .setColor(data.online ? 0x22c55e : 0xef4444)
+
+        .addFields(
+            { name: "Status", value: data.online ? "🟢 Online" : "🔴 Offline", inline: true },
+            { name: "Players", value: `${data.players} / ${data.max}`, inline: true },
+            { name: "Version", value: data.version, inline: true },
+            { name: "Players Online", value: playerList, inline: false }
+        )
+
+        .setFooter({ text: "Watcher v1 • Quick Check" })
+        .setTimestamp();
+}
+
+// ===== ROTATING STATUS =====
+function startPresenceRotation() {
+    const statuses = [
+        { name: "OmniCraft", type: ActivityType.Playing },
+        { name: "MC Server", type: ActivityType.Watching },
+        { name: "Players Online", type: ActivityType.Listening }
+    ];
+
+    let i = 0;
+
+    setInterval(() => {
+        client.user.setActivity(statuses[i]);
+        i = (i + 1) % statuses.length;
+    }, 20000);
+}
+
+// ===== UPDATER =====
 function startUpdater(channel) {
     if (updaterTimeout) return;
 
     async function loop() {
-        console.log("⏱ Checking update...");
-
-        if (!statusMessage) {
-            updaterTimeout = null;
-            return;
-        }
+        if (!statusMessage) return;
 
         try {
-            const data = await getStatus();
+            const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
 
             if (
                 !lastData ||
                 data.online !== lastData.online ||
-                data.players !== lastData.players ||
-                data.max !== lastData.max
+                data.players !== lastData.players
             ) {
                 lastData = data;
-
-                await statusMessage.edit({
-                    embeds: [buildEmbed(data)]
-                });
-
-                console.log("✅ Updated");
+                await statusMessage.edit({ embeds: [buildEmbed(data)] });
             }
 
-        } catch (err) {
-            console.log("❌ Update error:", err.message);
-        }
+        } catch {}
 
         updaterTimeout = setTimeout(loop, 60000);
     }
@@ -175,7 +185,7 @@ function startUpdater(channel) {
     updaterTimeout = setTimeout(loop, 60000);
 }
 
-// ===== READY (RECOVERY) =====
+// ===== READY =====
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
@@ -183,6 +193,8 @@ client.on('ready', async () => {
         Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
         { body: commands }
     );
+
+    startPresenceRotation();
 
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
@@ -194,7 +206,6 @@ client.on('ready', async () => {
             const msg = await channel.messages.fetch(savedId);
             statusMessage = msg;
             restored = true;
-            console.log("🔁 Restored panel");
         } catch {}
     }
 
@@ -210,57 +221,67 @@ client.on('ready', async () => {
         if (panel) {
             statusMessage = panel;
             savePanel(panel.id);
-            console.log("🔍 Recovered panel");
         }
     }
 
-    if (statusMessage) {
-        startUpdater(channel);
-    }
+    if (statusMessage) startUpdater(channel);
 });
 
-// ===== COMMAND =====
+// ===== COMMAND HANDLER =====
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName !== 'serverstat') return;
+
+    if (!hasAccess(interaction)) {
+        return interaction.reply({
+            content: "❌ You don’t have permission to use this command.",
+            ephemeral: true
+        });
+    }
 
     const channel = await client.channels.fetch(CHANNEL_ID);
 
     try {
-        const data = await getStatus();
-        lastData = data;
+        // ===== PANEL =====
+        if (interaction.commandName === 'serverstat') {
 
-        let msg = null;
-        const savedId = loadPanel();
+            const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
+            lastData = data;
 
-        if (savedId) {
-            try {
-                msg = await channel.messages.fetch(savedId);
-            } catch {}
-        }
+            let msg;
+            const savedId = loadPanel();
 
-        if (msg) {
-            await msg.edit({ embeds: [buildEmbed(data)] });
-            statusMessage = msg;
-        } else {
-            msg = await channel.send({ embeds: [buildEmbed(data)] });
-            statusMessage = msg;
-            savePanel(msg.id);
-        }
-
-        startUpdater(channel);
-
-        try {
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: "✅ Panel updated!",
-                    flags: 64
-                });
+            if (savedId) {
+                try {
+                    msg = await channel.messages.fetch(savedId);
+                } catch {}
             }
-        } catch {}
+
+            if (msg) {
+                await msg.edit({ embeds: [buildEmbed(data)] });
+            } else {
+                msg = await channel.send({ embeds: [buildEmbed(data)] });
+                savePanel(msg.id);
+            }
+
+            statusMessage = msg;
+            startUpdater(channel);
+
+            return interaction.reply({ content: "✅ Panel updated!", ephemeral: true });
+        }
+
+        // ===== SIMPLE LOOKUP =====
+        if (interaction.commandName === 'mcsrv') {
+
+            const ip = interaction.options.getString('ip');
+            const data = await getStatus(ip);
+
+            return interaction.reply({
+                embeds: [buildSimpleEmbed(data, ip)]
+            });
+        }
 
     } catch (err) {
-        console.log("❌ Command error:", err.message);
+        console.log(err);
     }
 });
 
