@@ -9,9 +9,13 @@ const {
     AttachmentBuilder
 } = require('discord.js');
 
-const res = await fetch(url);
 const fs = require('fs');
 const express = require('express');
+
+// ✅ SAFE FETCH (works on all Node versions)
+const fetch = global.fetch || ((...args) =>
+    import('node-fetch').then(({ default: fetch }) => fetch(...args))
+);
 
 // ===== ENV =====
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -36,9 +40,11 @@ app.listen(3000, () => {
     console.log("🌐 Keep-alive server running");
 });
 
-// Optional internal ping (backup)
+// ✅ Internal ping (safe + logs)
 setInterval(() => {
-    fetch(`http://localhost:3000`).catch(() => {});
+    fetch("http://localhost:3000")
+        .then(() => console.log("🔁 Internal ping"))
+        .catch(() => console.log("⚠️ Internal ping failed"));
 }, 4 * 60 * 1000);
 
 // ===== CLIENT =====
@@ -81,7 +87,7 @@ function loadPanel() {
 
 // ===== PERMISSION =====
 function hasAccess(interaction) {
-    return interaction.member.roles.cache.has(ALLOWED_ROLE_ID);
+    return interaction.member?.roles?.cache?.has(ALLOWED_ROLE_ID);
 }
 
 // ===== FETCH STATUS =====
@@ -183,16 +189,17 @@ async function dynamicPresence() {
     }
 }
 
-setInterval(dynamicPresence, 20000);
-
 // ===== UPDATER =====
 function startUpdater(channel) {
-    if (updaterTimeout) return;
+    if (updaterTimeout) clearTimeout(updaterTimeout);
 
     async function loop() {
         console.log("⏱ Checking update...");
 
-        if (!statusMessage) return;
+        if (!statusMessage) {
+            updaterTimeout = setTimeout(loop, 60000);
+            return;
+        }
 
         try {
             const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
@@ -227,6 +234,7 @@ client.on('ready', async () => {
         { body: commands }
     );
 
+    setInterval(dynamicPresence, 20000);
     dynamicPresence();
 
     const channel = await client.channels.fetch(CHANNEL_ID);
