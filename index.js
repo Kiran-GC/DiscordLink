@@ -11,6 +11,7 @@ const {
 
 const fetch = require('node-fetch');
 const fs = require('fs');
+const express = require('express');
 
 // ===== ENV =====
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -23,6 +24,22 @@ const MC_HOST = "play.gamerluttan.online";
 const MC_PORT = 25588;
 
 const SAVE_FILE = "panel.json";
+
+// ===== EXPRESS KEEP ALIVE =====
+const app = express();
+
+app.get("/", (req, res) => {
+    res.send("Bot is alive");
+});
+
+app.listen(3000, () => {
+    console.log("🌐 Keep-alive server running");
+});
+
+// Optional internal ping (backup)
+setInterval(() => {
+    fetch(`http://localhost:3000`).catch(() => {});
+}, 4 * 60 * 1000);
 
 // ===== CLIENT =====
 const client = new Client({
@@ -151,29 +168,12 @@ async function dynamicPresence() {
     try {
         const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
 
-        const activities = [];
-
-        activities.push({
-            name: `${data.players}/${data.max} players online`,
-            type: ActivityType.Watching
-        });
-
-        activities.push({
-            name: data.online ? "Server Online" : "Server Offline",
-            type: ActivityType.Watching
-        });
-
-        if (data.version) {
-            activities.push({
-                name: `Forge ${data.version}`,
-                type: ActivityType.Playing
-            });
-        }
-
-        activities.push({
-            name: "play.gamerluttan.online",
-            type: ActivityType.Playing
-        });
+        const activities = [
+            { name: `${data.players}/${data.max} players online`, type: ActivityType.Watching },
+            { name: data.online ? "Server Online" : "Server Offline", type: ActivityType.Watching },
+            { name: `Forge ${data.version}`, type: ActivityType.Playing },
+            { name: "play.gamerluttan.online", type: ActivityType.Playing }
+        ];
 
         const activity = activities[Math.floor(Math.random() * activities.length)];
         client.user.setActivity(activity);
@@ -183,7 +183,6 @@ async function dynamicPresence() {
     }
 }
 
-// Run presence every 20 sec
 setInterval(dynamicPresence, 20000);
 
 // ===== UPDATER =====
@@ -200,8 +199,8 @@ function startUpdater(channel) {
 
             if (
                 !lastData ||
-                data.online !== lastData.online ||
                 data.players !== lastData.players ||
+                data.online !== lastData.online ||
                 data.max !== lastData.max
             ) {
                 lastData = data;
@@ -240,7 +239,6 @@ client.on('ready', async () => {
             const msg = await channel.messages.fetch(savedId);
             statusMessage = msg;
             restored = true;
-            console.log("🔁 Restored via ID");
         } catch {}
     }
 
@@ -256,7 +254,6 @@ client.on('ready', async () => {
         if (panel) {
             statusMessage = panel;
             savePanel(panel.id);
-            console.log("🔍 Recovered via title");
         }
     }
 
@@ -277,7 +274,6 @@ client.on('interactionCreate', async interaction => {
     const channel = await client.channels.fetch(CHANNEL_ID);
 
     try {
-        // ===== PANEL =====
         if (interaction.commandName === 'serverstat') {
 
             const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
@@ -305,7 +301,6 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ content: "✅ Panel updated!", ephemeral: true });
         }
 
-        // ===== MCSRV =====
         if (interaction.commandName === 'mcsrv') {
 
             const ip = interaction.options.getString('ip');
@@ -339,8 +334,3 @@ client.on('interactionCreate', async interaction => {
 
 // ===== START =====
 client.login(DISCORD_TOKEN);
-
-// ===== KEEP ALIVE =====
-require('http').createServer((req, res) => {
-    res.end("Alive");
-}).listen(3000);
