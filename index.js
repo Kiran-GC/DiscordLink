@@ -78,11 +78,11 @@ async function getStatus() {
     }
 }
 
-// ===== UPDATED EMBED =====
+// ===== EMBED (BOX STYLE UI) =====
 function buildEmbed(data) {
     const playerList = data.list.length
         ? data.list.slice(0, 10)
-            .map(p => `• \`${p}\``)
+            .map(p => `• ${p}`)
             .join("\n") +
           (data.list.length > 10 ? `\n+ ${data.list.length - 10} more...` : "")
         : "No players online";
@@ -98,32 +98,32 @@ function buildEmbed(data) {
         .addFields(
             {
                 name: "Status",
-                value: data.online ? "🟢 Online" : "🔴 Offline",
+                value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``,
                 inline: true
             },
             {
                 name: "Players",
-                value: `${data.players} / ${data.max}`,
+                value: `\`\`\`${data.players} / ${data.max}\`\`\``,
                 inline: true
             },
             {
                 name: "Version",
-                value: data.version,
+                value: `\`\`\`${data.version}\`\`\``,
                 inline: true
             },
             {
                 name: "Primary IP",
-                value: "`play.gamerluttan.online`",
+                value: "```play.gamerluttan.online```",
                 inline: true
             },
             {
                 name: "Secondary IP",
-                value: "`play.adholokham.online`",
+                value: "```play.adholokham.online```",
                 inline: true
             },
             {
                 name: "Players Online",
-                value: playerList,
+                value: `\`\`\`\n${playerList}\n\`\`\``,
                 inline: false
             }
         )
@@ -174,7 +174,7 @@ function startUpdater(channel) {
     updaterTimeout = setTimeout(loop, 60000);
 }
 
-// ===== READY =====
+// ===== READY (FIXED CLEANUP) =====
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
@@ -192,7 +192,21 @@ client.on('ready', async () => {
             console.log("🔁 Restored panel");
             startUpdater(channel);
         } catch {
-            console.log("⚠️ Panel not found");
+            console.log("⚠️ Saved panel missing → cleaning old panels");
+
+            const messages = await channel.messages.fetch({ limit: 50 });
+
+            const panels = messages.filter(msg =>
+                msg.author.id === client.user.id &&
+                msg.embeds.length > 0 &&
+                msg.embeds[0].title === "Adholokham MC (OmniCraft)"
+            );
+
+            for (const msg of panels.values()) {
+                try { await msg.delete(); } catch {}
+            }
+
+            fs.writeFileSync(SAVE_FILE, JSON.stringify({ id: null }));
         }
     }
 });
