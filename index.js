@@ -78,55 +78,53 @@ async function getStatus() {
     }
 }
 
-// ===== EMBED (NEW DESIGN) =====
+// ===== MODERN EMBED =====
 function buildEmbed(data) {
-    const uptime = "Unknown";
-
     const playerList = data.list.length
-        ? data.list.map(p => `• ${p}`).join("\n")
+        ? data.list.slice(0, 10)
+            .map(p => `• \`${p}\``)
+            .join("\n") +
+          (data.list.length > 10 ? `\n+ ${data.list.length - 10} more...` : "")
         : "No players online";
 
     return new EmbedBuilder()
         .setTitle("Adholokham MC (OmniCraft)")
-        .setDescription("The ultimate Minecraft experience where your story begins.")
-        .setColor(data.online ? 0x00ff88 : 0xff3b3b)
+        .setDescription("Forge-powered OmniCraft experience • Survival • Economy • Community-driven gameplay")
+
+        .setColor(data.online ? 0x22c55e : 0xef4444)
 
         .setThumbnail("https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png")
 
         .addFields(
             {
-                name: "┃ STATUS",
-                value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``,
+                name: "Status",
+                value: data.online ? "🟢 Online" : "🔴 Offline",
                 inline: true
             },
             {
-                name: "┃ PLAYERS",
-                value: `\`\`\`${data.players}/${data.max}\`\`\``,
+                name: "Players",
+                value: `${data.players} / ${data.max}`,
                 inline: true
             },
             {
-                name: "┃ UPTIME",
-                value: `\`\`\`${uptime}\`\`\``,
+                name: "Version",
+                value: data.version,
                 inline: true
             },
             {
-                name: "┃ IP",
-                value:
-`\`\`\`
-play.gamerluttan.online
-play.adholokham.online
-\`\`\``,
-                inline: true
+                name: "Join Server",
+                value: "`play.gamerluttan.online`\n`play.adholokham.online`",
+                inline: false
             },
             {
-                name: "┃ PLAYER LIST",
-                value: `\`\`\`\n${playerList}\n\`\`\``,
+                name: "Players Online",
+                value: playerList,
                 inline: false
             }
         )
 
         .setFooter({
-            text: "Watcher v1 • Updated every minute"
+            text: "Watcher v1 • Live Status"
         })
         .setTimestamp();
 }
