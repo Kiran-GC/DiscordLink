@@ -78,7 +78,7 @@ async function getStatus() {
     }
 }
 
-// ===== EMBED (BOX UI) =====
+// ===== EMBED (FINAL UI FIXED) =====
 function buildEmbed(data) {
     const playerList = data.list.length
         ? data.list.slice(0, 10)
@@ -95,32 +95,35 @@ function buildEmbed(data) {
 
         .addFields(
             {
-                name: "Status",
+                name: "📡 Status",
                 value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``,
                 inline: true
             },
             {
-                name: "Players",
+                name: "👥 Players",
                 value: `\`\`\`${data.players} / ${data.max}\`\`\``,
                 inline: true
             },
             {
-                name: "Version",
+                name: "⚙️ Version",
                 value: `\`\`\`${data.version}\`\`\``,
                 inline: true
             },
+
+            // 🔥 FULL WIDTH → NO WRAP
             {
-                name: "Primary IP",
+                name: "🌐 Primary IP",
                 value: "```play.gamerluttan.online```",
-                inline: true
+                inline: false
             },
             {
-                name: "Secondary IP",
+                name: "🌐 Secondary IP",
                 value: "```play.adholokham.online```",
-                inline: true
+                inline: false
             },
+
             {
-                name: "Players Online",
+                name: "👥 Players Online",
                 value: `\`\`\`\n${playerList}\n\`\`\``,
                 inline: false
             }
@@ -172,7 +175,7 @@ function startUpdater(channel) {
     updaterTimeout = setTimeout(loop, 60000);
 }
 
-// ===== READY (RECOVERY SYSTEM) =====
+// ===== READY (RECOVERY) =====
 client.on('ready', async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
@@ -186,19 +189,15 @@ client.on('ready', async () => {
 
     let restored = false;
 
-    // Try restore via saved ID
     if (savedId) {
         try {
             const msg = await channel.messages.fetch(savedId);
             statusMessage = msg;
             restored = true;
-            console.log("🔁 Restored panel via saved ID");
-        } catch {
-            console.log("⚠️ Saved ID invalid");
-        }
+            console.log("🔁 Restored panel");
+        } catch {}
     }
 
-    // Fallback: find panel in channel
     if (!restored) {
         const messages = await channel.messages.fetch({ limit: 50 });
 
@@ -211,16 +210,12 @@ client.on('ready', async () => {
         if (panel) {
             statusMessage = panel;
             savePanel(panel.id);
-            restored = true;
-            console.log("🔍 Recovered panel from channel");
+            console.log("🔍 Recovered panel");
         }
     }
 
-    // Start updater if panel exists
     if (statusMessage) {
         startUpdater(channel);
-    } else {
-        console.log("⚠️ No panel found (will create on command)");
     }
 });
 
@@ -241,28 +236,16 @@ client.on('interactionCreate', async interaction => {
         if (savedId) {
             try {
                 msg = await channel.messages.fetch(savedId);
-            } catch {
-                msg = null;
-            }
+            } catch {}
         }
 
         if (msg) {
-            await msg.edit({
-                embeds: [buildEmbed(data)]
-            });
-
+            await msg.edit({ embeds: [buildEmbed(data)] });
             statusMessage = msg;
-            console.log("♻️ Reused panel");
-
         } else {
-            msg = await channel.send({
-                embeds: [buildEmbed(data)]
-            });
-
+            msg = await channel.send({ embeds: [buildEmbed(data)] });
             statusMessage = msg;
             savePanel(msg.id);
-
-            console.log("🆕 Created panel");
         }
 
         startUpdater(channel);
