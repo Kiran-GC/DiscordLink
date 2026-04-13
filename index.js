@@ -116,7 +116,7 @@ function startUpdater(channel) {
 
         console.log("Players:", data.players);
 
-        // ✅ SMART CHECK (fixed)
+        // ✅ Smart comparison
         if (
             lastData &&
             data.online === lastData.online &&
@@ -135,7 +135,7 @@ function startUpdater(channel) {
 
             console.log("✅ Updated");
 
-        } catch (err) {
+        } catch {
             console.log("❌ Message lost, stopping updater");
             clearInterval(updaterInterval);
             statusMessage = null;
@@ -175,15 +175,18 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.commandName === 'serverstat') {
 
+        // ✅ Prevent timeout
+        await interaction.deferReply({ ephemeral: true });
+
         const channel = await client.channels.fetch(CHANNEL_ID);
 
-        // ✅ DELETE ONLY SAVED PANEL
+        // ✅ Delete ONLY saved panel safely
         const savedId = loadPanel();
 
         if (savedId) {
             try {
                 const oldMsg = await channel.messages.fetch(savedId);
-                await oldMsg.delete();
+                if (oldMsg) await oldMsg.delete();
             } catch {}
         }
 
@@ -196,9 +199,8 @@ client.on('interactionCreate', async interaction => {
 
         savePanel(statusMessage.id);
 
-        await interaction.reply({
-            content: "✅ Panel created/reset!",
-            ephemeral: true
+        await interaction.editReply({
+            content: "✅ Panel created/reset!"
         });
 
         startUpdater(channel);
