@@ -1,15 +1,20 @@
-const { MEMBER_ROLE_ID, MC_ROLE_ID, VERIFY_CHANNEL_ID } = require('./config');
+const {
+    MEMBER_ROLE_ID,
+    MC_ROLE_ID,
+    VERIFY_CHANNEL_ID,
+    GET_ROLES_CHANNEL_ID
+} = require('./config');
 
 const tutorials = {
     verify: {
-        title: "🔐 Verification Guide",
+        title: "🔐 Adholokham MC • Verification Guide",
         video: "https://www.youtube.com/watch?v=u5DVqmnY4us",
         pages: [
             `Step 1:
 Join the Discord server, accept the rules, and make sure you receive the <@&${MEMBER_ROLE_ID}> role.
 
 Step 2:
-Go to the roles channel and obtain the <@&${MC_ROLE_ID}> role.`,
+Go to <#${GET_ROLES_CHANNEL_ID}> and obtain the <@&${MC_ROLE_ID}> role.`,
 
             `Step 3:
 Join the Minecraft server at \`gamerluttan.online\` and log in once.
@@ -32,12 +37,12 @@ Join the Minecraft server again.`,
 When prompted, register using:
 /register [password] [password]
 
-✅ You now have full access to the server!`
+✅ You now have full access to Adholokham MC!`
         ]
     },
 
     install: {
-        title: "📦 OmniCraft Installation",
+        title: "📦 Adholokham MC • OmniCraft Installation",
         video: "https://www.youtube.com/watch?v=iik25wqIuFo",
         pages: [
             `If you are using the official Minecraft launcher:
@@ -75,7 +80,7 @@ Download from CurseForge and manually add Simple Voice Chat.`,
             `Step 6:
 Click Play.
 
-✅ You are ready to join OmniCraft!`
+✅ You are ready to join Adholokham MC!`
         ]
     }
 };

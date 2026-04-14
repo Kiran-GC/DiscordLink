@@ -10,27 +10,38 @@ const { tutorials } = require('./data');
 
 const sessions = new Map();
 
+// 🎨 BRAND SETTINGS
+const BRAND_COLOR = 0x22c55e; // same green you used before
+const BRAND_THUMBNAIL = "https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png";
+
 // ===== PANEL =====
 function createPanel() {
     const embed = new EmbedBuilder()
-        .setTitle("📚 OmniCraft Tutorials")
-        .setDescription("Select a tutorial below to get started.\n\nAll guides are detailed and step-by-step.");
+        .setTitle("📚 Adholokham MC • Tutorials")
+        .setDescription(
+            "Welcome to **Adholokham MC (OmniCraft)**.\n\n" +
+            "Use the dropdown below to access detailed step-by-step guides.\n" +
+            "These tutorials will help you get started quickly."
+        )
+        .setColor(BRAND_COLOR)
+        .setThumbnail(BRAND_THUMBNAIL)
+        .setFooter({ text: "Adholokham MC • Getting Started" });
 
     const menu = new StringSelectMenuBuilder()
         .setCustomId("tutorial_select")
-        .setPlaceholder("Choose a tutorial...")
+        .setPlaceholder("Select a tutorial...")
         .addOptions([
             {
                 label: "Verify Yourself",
                 value: "verify",
                 emoji: "🔐",
-                description: "Step-by-step account verification guide"
+                description: "Access the server and link your account"
             },
             {
                 label: "Install OmniCraft",
                 value: "install",
                 emoji: "📦",
-                description: "Full modpack installation guide"
+                description: "Set up the modpack correctly"
             }
         ]);
 
@@ -48,7 +59,9 @@ function createPage(tutorialKey, pageIndex) {
     const embed = new EmbedBuilder()
         .setTitle(tutorial.title)
         .setDescription(tutorial.pages[pageIndex])
-        .setFooter({ text: `Page ${pageIndex + 1} / ${total}` });
+        .setColor(BRAND_COLOR)
+        .setThumbnail(BRAND_THUMBNAIL)
+        .setFooter({ text: `Page ${pageIndex + 1} / ${total} • Adholokham MC` });
 
     const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
