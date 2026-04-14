@@ -6,8 +6,8 @@ const { dynamicPresence } = require('../systems/presence');
 const { loadPanel, savePanel } = require('../utils/storage');
 const { setMessage, startUpdater } = require('../systems/updater');
 
-// ⭐ NEW IMPORTS
-const { handleTutorials, createPanel } = require('../systems/tutorials/tutorials');
+// ⭐ Tutorials
+const { handleTutorials, upsertPanel } = require('../systems/tutorials/tutorials');
 const { TUTORIAL_CHANNEL_ID } = require('../systems/tutorials/config');
 
 const client = new Client({
@@ -75,23 +75,10 @@ client.once('ready', async () => {
         console.log("⚠️ No panel found. Use /serverstat to create one.");
     }
 
-    // ===== TUTORIAL PANEL AUTO-CREATE =====
+    // ===== TUTORIAL PANEL (ALWAYS UPDATE) =====
     try {
         const tutorialChannel = await client.channels.fetch(TUTORIAL_CHANNEL_ID);
-        const messages = await tutorialChannel.messages.fetch({ limit: 10 });
-
-        const existing = messages.find(msg =>
-            msg.author.id === client.user.id &&
-            msg.components.length > 0
-        );
-
-        if (!existing) {
-            await tutorialChannel.send(createPanel());
-            console.log("✅ Tutorial panel created");
-        } else {
-            console.log("ℹ️ Tutorial panel already exists");
-        }
-
+        await upsertPanel(client, tutorialChannel);
     } catch (err) {
         console.log("❌ Tutorial panel error:", err.message);
     }
@@ -99,11 +86,8 @@ client.once('ready', async () => {
 
 // ===== INTERACTIONS =====
 client.on('interactionCreate', interaction => {
-    // Existing command system
     handleInteraction(client, interaction);
-
-    // ⭐ NEW tutorial system
-    handleTutorials(interaction);
+    handleTutorials(interaction, client);
 });
 
 client.login(DISCORD_TOKEN);

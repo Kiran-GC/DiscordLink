@@ -10,8 +10,13 @@ const commands = [
         .setDescription('Check any Minecraft server')
         .addStringOption(opt =>
             opt.setName('ip')
+                .setDescription('Server IP (with optional port)')
                 .setRequired(true)
-                .setDescription('Server IP'))
+        ),
+
+    new SlashCommandBuilder()
+        .setName('tutorials')
+        .setDescription('Create or update tutorial panel')
 ];
 
 module.exports = { commands };

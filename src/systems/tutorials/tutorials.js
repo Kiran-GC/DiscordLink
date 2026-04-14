@@ -10,8 +10,10 @@ const { tutorials } = require('./data');
 
 const sessions = new Map();
 
-// 🎨 BRAND SETTINGS
-const BRAND_COLOR = 0x22c55e; // same green you used before
+// 🎨 BRAND COLORS
+const PANEL_COLOR = 0x8b5cf6;   // Purple
+const PAGE_COLOR = 0xfacc15;    // Yellow
+
 const BRAND_THUMBNAIL = "https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png";
 
 // ===== PANEL =====
@@ -20,12 +22,12 @@ function createPanel() {
         .setTitle("📚 Adholokham MC • Tutorials")
         .setDescription(
             "Welcome to **Adholokham MC (OmniCraft)**.\n\n" +
-            "Use the dropdown below to access detailed step-by-step guides.\n" +
-            "These tutorials will help you get started quickly."
+            "Use the dropdown below to access detailed guides.\n" +
+            "Follow the steps carefully to get started."
         )
-        .setColor(BRAND_COLOR)
+        .setColor(PANEL_COLOR)
         .setThumbnail(BRAND_THUMBNAIL)
-        .setFooter({ text: "Adholokham MC • Getting Started" });
+        .setFooter({ text: "Tutorial Hub • Navigation Panel" });
 
     const menu = new StringSelectMenuBuilder()
         .setCustomId("tutorial_select")
@@ -35,13 +37,13 @@ function createPanel() {
                 label: "Verify Yourself",
                 value: "verify",
                 emoji: "🔐",
-                description: "Access the server and link your account"
+                description: "Access the server and verify your account"
             },
             {
                 label: "Install OmniCraft",
                 value: "install",
                 emoji: "📦",
-                description: "Set up the modpack correctly"
+                description: "Install and setup the modpack"
             }
         ]);
 
@@ -59,7 +61,7 @@ function createPage(tutorialKey, pageIndex) {
     const embed = new EmbedBuilder()
         .setTitle(tutorial.title)
         .setDescription(tutorial.pages[pageIndex])
-        .setColor(BRAND_COLOR)
+        .setColor(PAGE_COLOR)
         .setThumbnail(BRAND_THUMBNAIL)
         .setFooter({ text: `Page ${pageIndex + 1} / ${total} • Adholokham MC` });
 
@@ -91,10 +93,30 @@ function createPage(tutorialKey, pageIndex) {
     };
 }
 
-// ===== HANDLER =====
-async function handleTutorials(interaction) {
+// ===== PANEL UPSERT =====
+async function upsertPanel(client, channel) {
+    const messages = await channel.messages.fetch({ limit: 20 });
 
-    // DROPDOWN
+    const existing = messages.find(msg =>
+        msg.author.id === client.user.id &&
+        msg.components.length > 0 &&
+        msg.components[0]?.components[0]?.customId === "tutorial_select"
+    );
+
+    if (existing) {
+        await existing.edit(createPanel());
+        console.log("♻️ Tutorial panel updated");
+        return;
+    }
+
+    await channel.send(createPanel());
+    console.log("✅ Tutorial panel created");
+}
+
+// ===== HANDLER =====
+async function handleTutorials(interaction, client) {
+
+    // ===== DROPDOWN =====
     if (interaction.isStringSelectMenu() && interaction.customId === "tutorial_select") {
         const key = interaction.values[0];
 
@@ -109,7 +131,7 @@ async function handleTutorials(interaction) {
         });
     }
 
-    // BUTTONS
+    // ===== BUTTONS =====
     if (interaction.isButton()) {
         const session = sessions.get(interaction.user.id);
         if (!session) return;
@@ -136,5 +158,6 @@ async function handleTutorials(interaction) {
 
 module.exports = {
     createPanel,
-    handleTutorials
+    handleTutorials,
+    upsertPanel
 };
