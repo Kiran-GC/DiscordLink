@@ -6,8 +6,16 @@ const { dynamicPresence } = require('../systems/presence');
 const { loadPanel, savePanel } = require('../utils/storage');
 const { setMessage, startUpdater } = require('../systems/updater');
 
+// ⭐ NEW IMPORTS
+const { handleTutorials, createPanel } = require('../systems/tutorials/tutorials');
+const { TUTORIAL_CHANNEL_ID } = require('../systems/tutorials/config');
+
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions
+    ]
 });
 
 client.once('ready', async () => {
@@ -19,16 +27,16 @@ client.once('ready', async () => {
         { body: commands.map(c => c.toJSON()) }
     );
 
-    // Presence
+    // ===== PRESENCE =====
     setInterval(() => dynamicPresence(client), 20000);
     dynamicPresence(client);
 
+    // ===== MC PANEL RESTORE =====
     const channel = await client.channels.fetch(CHANNEL_ID);
     const savedId = loadPanel();
 
     let restored = false;
 
-    // ===== 1. Try restore from saved ID =====
     if (savedId) {
         try {
             const msg = await channel.messages.fetch(savedId);
@@ -36,12 +44,11 @@ client.once('ready', async () => {
             startUpdater(channel);
             console.log("✅ Panel restored from saved ID");
             restored = true;
-        } catch (err) {
+        } catch {
             console.log("⚠️ Failed to fetch saved panel, trying fallback...");
         }
     }
 
-    // ===== 2. Fallback: scan channel =====
     if (!restored) {
         try {
             const messages = await channel.messages.fetch({ limit: 50 });
@@ -55,24 +62,48 @@ client.once('ready', async () => {
             if (panel) {
                 setMessage(panel);
                 startUpdater(channel);
-                console.log("✅ Panel restored via channel scan");
-
-                // Re-save panel ID (important for Render resets)
                 savePanel(panel.id);
-
+                console.log("✅ Panel restored via scan");
                 restored = true;
             }
         } catch (err) {
-            console.log("❌ Fallback scan failed:", err.message);
+            console.log("❌ Panel scan failed:", err.message);
         }
     }
 
-    // ===== 3. Final fallback =====
     if (!restored) {
-        console.log("⚠️ No existing panel found. Use /serverstat to create one.");
+        console.log("⚠️ No panel found. Use /serverstat to create one.");
+    }
+
+    // ===== TUTORIAL PANEL AUTO-CREATE =====
+    try {
+        const tutorialChannel = await client.channels.fetch(TUTORIAL_CHANNEL_ID);
+        const messages = await tutorialChannel.messages.fetch({ limit: 10 });
+
+        const existing = messages.find(msg =>
+            msg.author.id === client.user.id &&
+            msg.components.length > 0
+        );
+
+        if (!existing) {
+            await tutorialChannel.send(createPanel());
+            console.log("✅ Tutorial panel created");
+        } else {
+            console.log("ℹ️ Tutorial panel already exists");
+        }
+
+    } catch (err) {
+        console.log("❌ Tutorial panel error:", err.message);
     }
 });
 
-client.on('interactionCreate', i => handleInteraction(client, i));
+// ===== INTERACTIONS =====
+client.on('interactionCreate', interaction => {
+    // Existing command system
+    handleInteraction(client, interaction);
+
+    // ⭐ NEW tutorial system
+    handleTutorials(interaction);
+});
 
 client.login(DISCORD_TOKEN);
