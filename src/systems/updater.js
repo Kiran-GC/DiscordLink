@@ -10,38 +10,68 @@ function setMessage(msg) {
     statusMessage = msg;
 }
 
+// 🔥 helper: auto delete after 5 mins
+function autoDelete(message, delay = 5 * 60 * 1000) {
+    setTimeout(() => {
+        message.delete().catch(() => {});
+    }, delay);
+}
+
 function startUpdater(channel) {
     if (updaterTimeout) clearTimeout(updaterTimeout);
 
     async function loop() {
+
         if (!statusMessage) {
             updaterTimeout = setTimeout(loop, 60000);
             return;
         }
 
-        const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
+        try {
+            const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
 
-        if (
-            !lastData ||
-            data.players !== lastData.players ||
-            data.online !== lastData.online ||
-            data.max !== lastData.max
-        ) {
+            if (
+                !lastData ||
+                data.players !== lastData.players ||
+                data.online !== lastData.online ||
+                data.max !== lastData.max
+            ) {
 
-            if (lastData !== null && lastData.online && !data.online) {
-                if (NOTIFY_ROLE_ID) {
-                    channel.send({ content: `<@&${NOTIFY_ROLE_ID}> 🚨 Server is OFFLINE!` });
+                // 🔴 OFFLINE ALERT
+                if (lastData !== null && lastData.online && !data.online) {
+                    console.log("🚨 Server went OFFLINE");
+
+                    if (NOTIFY_ROLE_ID) {
+                        const msg = await channel.send({
+                            content: `<@&${NOTIFY_ROLE_ID}> 🚨 Server is **OFFLINE!**`
+                        });
+
+                        autoDelete(msg);
+                    }
                 }
+
+                // 🟢 ONLINE ALERT
+                if (lastData !== null && !lastData.online && data.online) {
+                    console.log("🟢 Server back ONLINE");
+
+                    if (NOTIFY_ROLE_ID) {
+                        const msg = await channel.send({
+                            content: `<@&${NOTIFY_ROLE_ID}> ✅ Server is back **ONLINE!**`
+                        });
+
+                        autoDelete(msg);
+                    }
+                }
+
+                lastData = data;
+
+                await statusMessage.edit({
+                    embeds: [buildEmbed(data)]
+                });
             }
 
-            if (lastData !== null && !lastData.online && data.online) {
-                if (NOTIFY_ROLE_ID) {
-                    channel.send({ content: `<@&${NOTIFY_ROLE_ID}> ✅ Server is back ONLINE!` });
-                }
-            }
-
-            lastData = data;
-            await statusMessage.edit({ embeds: [buildEmbed(data)] });
+        } catch (err) {
+            console.log("❌ Update error:", err.message);
         }
 
         updaterTimeout = setTimeout(loop, 60000);
