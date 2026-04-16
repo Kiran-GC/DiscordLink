@@ -5,9 +5,7 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    EmbedBuilder,
-    ChannelSelectMenuBuilder,
-    ChannelType
+    EmbedBuilder
 } = require('discord.js');
 
 const sessions = new Map();
@@ -19,6 +17,7 @@ function buildEmbed(data) {
 
     if (data.title) embed.setTitle(data.title);
     if (data.description) embed.setDescription(data.description);
+
     if (!data.title && !data.description && !data.fields.length) {
         embed.setDescription("‎");
     }
@@ -120,22 +119,24 @@ async function handleBuilder(interaction) {
             return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
         }
 
-        // ✅ SUBMIT → DROPDOWN
+        // ===== SUBMIT (MODAL BACK) =====
         if (interaction.customId === "eb_submit") {
-            return interaction.reply({
-                content: "📍 Select a channel:",
-                components: [
-                    new ActionRowBuilder().addComponents(
-                        new ChannelSelectMenuBuilder()
-                            .setCustomId("eb_channel_select")
-                            .addChannelTypes(ChannelType.GuildText)
+            return interaction.showModal(
+                new ModalBuilder()
+                    .setCustomId("modal_submit")
+                    .setTitle("Send Embed")
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("channel")
+                                .setLabel("Channel (#channel or ID)")
+                                .setStyle(TextInputStyle.Short)
+                        )
                     )
-                ],
-                ephemeral: true
-            });
+            );
         }
 
-        // ===== MODAL BUTTONS (NO deferUpdate!) =====
+        // ===== MEDIA =====
         if (interaction.customId === "eb_media") {
             return interaction.showModal(
                 new ModalBuilder()
@@ -152,6 +153,7 @@ async function handleBuilder(interaction) {
             );
         }
 
+        // ===== EXTRAS =====
         if (interaction.customId === "eb_extras") {
             return interaction.showModal(
                 new ModalBuilder()
@@ -168,34 +170,36 @@ async function handleBuilder(interaction) {
             );
         }
 
-        // (other modals unchanged)
+        // (rest of your existing modals remain same)
     }
 
-    // ===== CHANNEL SELECT =====
-    if (interaction.isChannelSelectMenu()) {
-
-        const channel = interaction.guild.channels.cache.get(interaction.values[0]);
-        if (!channel) return;
-
-        await channel.send({ embeds: [buildEmbed(data)] });
-
-        try {
-            const builderChannel = await interaction.client.channels.fetch(session.channelId);
-            const builderMsg = await builderChannel.messages.fetch(session.messageId);
-            await builderMsg.delete();
-        } catch {}
-
-        sessions.delete(interaction.user.id);
-
-        return interaction.update({ content: "✅ Sent!", components: [] });
-    }
-
-    // ===== MODALS (FIXED PROPERLY) =====
+    // ===== MODALS =====
     if (interaction.isModalSubmit()) {
 
         await interaction.deferReply({ ephemeral: true });
 
         const d = interaction.fields;
+
+        if (interaction.customId === "modal_submit") {
+            const id = d.getTextInputValue("channel").replace(/[<#>]/g, "");
+            const channel = interaction.guild.channels.cache.get(id);
+
+            if (!channel) {
+                return interaction.editReply({ content: "❌ Invalid channel." });
+            }
+
+            await channel.send({ embeds: [buildEmbed(data)] });
+
+            try {
+                const builderChannel = await interaction.client.channels.fetch(session.channelId);
+                const builderMsg = await builderChannel.messages.fetch(session.messageId);
+                await builderMsg.delete();
+            } catch {}
+
+            sessions.delete(interaction.user.id);
+
+            return interaction.editReply({ content: "✅ Embed sent!" });
+        }
 
         if (interaction.customId === "modal_media") {
             data.thumbnail = d.getTextInputValue("thumbnail");
@@ -209,7 +213,6 @@ async function handleBuilder(interaction) {
         }
 
         await updateMessage(interaction, session);
-
         await interaction.deleteReply().catch(() => {});
     }
 }
