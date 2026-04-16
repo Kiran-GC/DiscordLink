@@ -10,7 +10,7 @@ const {
 
 const sessions = new Map();
 
-// ===== BUILD EMBED (FIXED) =====
+// ===== BUILD EMBED =====
 function buildEmbed(data) {
 
     const embed = new EmbedBuilder()
@@ -96,10 +96,8 @@ async function startBuilder(interaction) {
 
 // ===== UPDATE MESSAGE =====
 async function updateMessage(interaction, session) {
-
     const channel = interaction.guild.channels.cache.get(session.channelId);
     const msg = await channel.messages.fetch(session.messageId);
-
     await msg.edit(createUI(session.data));
 }
 
@@ -119,6 +117,7 @@ async function handleBuilder(interaction) {
             return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
         }
 
+        // ✏️ CONTENT
         if (interaction.customId === "eb_content") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_content")
@@ -144,6 +143,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // 🎨 STYLE
         if (interaction.customId === "eb_style") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_style")
@@ -169,6 +169,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // ➕ FIELDS
         if (interaction.customId === "eb_fields") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field")
@@ -199,6 +200,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // 🖼️ MEDIA
         if (interaction.customId === "eb_media") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_media")
@@ -224,6 +226,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // ⚙️ EXTRAS
         if (interaction.customId === "eb_extras") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_extras")
@@ -249,9 +252,22 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // ✅ SUBMIT (FIXED)
         if (interaction.customId === "eb_submit") {
-            sessions.delete(interaction.user.id);
-            return interaction.reply({ content: "✅ Builder closed.", ephemeral: true });
+            const modal = new ModalBuilder()
+                .setCustomId("modal_submit")
+                .setTitle("Send Embed");
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId("channel")
+                        .setLabel("Channel (#channel or ID)")
+                        .setStyle(TextInputStyle.Short)
+                )
+            );
+
+            return interaction.showModal(modal);
         }
     }
 
@@ -300,6 +316,30 @@ async function handleBuilder(interaction) {
             } else {
                 data.authorIcon = null;
             }
+        }
+
+        // ✅ FINAL SEND
+        if (interaction.customId === "modal_submit") {
+
+            const id = d.getTextInputValue("channel").replace(/[<#>]/g, "");
+            const channel = interaction.guild.channels.cache.get(id);
+
+            if (!channel) {
+                return interaction.reply({
+                    content: "❌ Invalid channel.",
+                    ephemeral: true
+                });
+            }
+
+            const embed = buildEmbed(data);
+            await channel.send({ embeds: [embed] });
+
+            sessions.delete(interaction.user.id);
+
+            return interaction.reply({
+                content: "✅ Embed sent successfully.",
+                ephemeral: true
+            });
         }
 
         await interaction.deferUpdate();
