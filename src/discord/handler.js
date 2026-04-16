@@ -6,18 +6,34 @@ const { hasAccess } = require('../utils/permissions');
 const { startUpdater, setMessage } = require('../systems/updater');
 const { CHANNEL_ID, MC_HOST, MC_PORT } = require('../config/config');
 const { AttachmentBuilder } = require('discord.js');
-const { startBuilder } = require('../systems/embedBuilder/builder');
+const { startBuilder, handleBuilder } = require('../systems/embedBuilder/builder');
 
 // ⭐ Tutorials
 const { upsertPanel } = require('../systems/tutorials/tutorials');
 const { TUTORIAL_CHANNEL_ID } = require('../systems/tutorials/config');
 
 async function handleInteraction(client, interaction) {
-    if (!interaction.isChatInputCommand()) return;
-
-    const channel = await client.channels.fetch(CHANNEL_ID);
 
     try {
+
+        // ===============================
+        // 🔹 EMBED BUILDER COMPONENTS (CRITICAL FIX)
+        // ===============================
+        if (
+            interaction.isButton() ||
+            interaction.isModalSubmit() ||
+            interaction.isChannelSelectMenu()
+        ) {
+            return handleBuilder(interaction);
+        }
+
+        // ===============================
+        // 🔹 ONLY SLASH COMMANDS BELOW
+        // ===============================
+        if (!interaction.isChatInputCommand()) return;
+
+        const channel = await client.channels.fetch(CHANNEL_ID);
+
         // ===== SERVER PANEL =====
         if (interaction.commandName === 'serverstat') {
 
@@ -89,14 +105,14 @@ async function handleInteraction(client, interaction) {
                 ephemeral: true
             });
         }
+
         // ===== EMBED BUILDER =====
         if (interaction.commandName === 'embed') {
-        
             return startBuilder(interaction);
         }
 
     } catch (err) {
-        console.log(err);
+        console.log("❌ Interaction Error:", err);
     }
 }
 

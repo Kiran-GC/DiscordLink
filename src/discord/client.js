@@ -7,11 +7,8 @@ const { loadPanel, savePanel } = require('../utils/storage');
 const { setMessage, startUpdater } = require('../systems/updater');
 
 // Tutorials
-const { handleTutorials, upsertPanel } = require('../systems/tutorials/tutorials');
+const { upsertPanel } = require('../systems/tutorials/tutorials');
 const { TUTORIAL_CHANNEL_ID } = require('../systems/tutorials/config');
-
-// Embed Builder
-const { handleBuilder } = require('../systems/embedBuilder/builder');
 
 const client = new Client({
     intents: [
@@ -21,16 +18,18 @@ const client = new Client({
     ]
 });
 
-client.once('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}`);
+// ===== READY =====
+client.once('clientReady', async () => {
+    console.log(`✅ Logged in as ${client.user.tag}`);
 
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
+
     await rest.put(
         Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
         { body: commands.map(c => c.toJSON()) }
     );
 
-    // Presence
+    // ===== PRESENCE =====
     setInterval(() => dynamicPresence(client), 20000);
     dynamicPresence(client);
 
@@ -78,38 +77,29 @@ client.once('ready', async () => {
         console.log("⚠️ No panel found. Use /serverstat to create one.");
     }
 
-    // ===== TUTORIAL PANEL UPSERT =====
+    // ===== TUTORIAL PANEL =====
     try {
         const tutorialChannel = await client.channels.fetch(TUTORIAL_CHANNEL_ID);
         await upsertPanel(client, tutorialChannel);
+        console.log("♻️ Tutorial panel updated");
     } catch (err) {
         console.log("❌ Tutorial panel error:", err.message);
     }
 });
 
-// ===== INTERACTION ROUTING (FIXED) =====
+// ===== SINGLE INTERACTION ENTRY POINT (CRITICAL FIX) =====
 client.on('interactionCreate', async (interaction) => {
-
-    try {
-        // ===== COMMANDS =====
-        if (interaction.isChatInputCommand()) {
-            return handleInteraction(client, interaction);
-        }
-
-        // ===== TUTORIAL SYSTEM =====
-        if (interaction.isStringSelectMenu() || interaction.isButton()) {
-            const handled = await handleTutorials(interaction, client);
-            if (handled) return;
-        }
-
-        // ===== EMBED BUILDER =====
-        if (interaction.isButton() || interaction.isModalSubmit()) {
-            return handleBuilder(interaction);
-        }
-
-    } catch (err) {
-        console.log("❌ Interaction error:", err);
-    }
+    await handleInteraction(client, interaction);
 });
 
+// ===== ERROR SAFETY =====
+client.on('error', (err) => {
+    console.error("❌ Client error:", err);
+});
+
+process.on('unhandledRejection', (err) => {
+    console.error("❌ Unhandled rejection:", err);
+});
+
+// ===== LOGIN =====
 client.login(DISCORD_TOKEN);
