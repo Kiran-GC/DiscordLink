@@ -8,7 +8,7 @@ const {
 const tutorials = {
     verify: {
         title: "🔐 Adholokham MC • Verification Guide",
-        video: "https://www.youtube.com/watch?v=u5DVqmnY4us",
+        video: "https://youtu.be/MqOQOWszmdk",
         pages: [
             `Step 1:
 Join the Discord server, accept the rules, and make sure you receive the <@&${MEMBER_ROLE_ID}> role.
@@ -43,7 +43,7 @@ When prompted, register using:
 
     install: {
         title: "📦 Adholokham MC • OmniCraft Installation",
-        video: "https://www.youtube.com/watch?v=iik25wqIuFo",
+        video: "https://youtu.be/MqOQOWszmdk",
         pages: [
             `If you are using the official Minecraft launcher:
 
