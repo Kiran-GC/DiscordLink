@@ -6,9 +6,11 @@ const { hasAccess } = require('../utils/permissions');
 const { startUpdater, setMessage } = require('../systems/updater');
 const { CHANNEL_ID, MC_HOST, MC_PORT } = require('../config/config');
 const { AttachmentBuilder } = require('discord.js');
+
+// Embed Builder
 const { startBuilder, handleBuilder } = require('../systems/embedBuilder/builder');
 
-// ⭐ Tutorials
+// Tutorials
 const { upsertPanel } = require('../systems/tutorials/tutorials');
 const { TUTORIAL_CHANNEL_ID } = require('../systems/tutorials/config');
 
@@ -17,7 +19,7 @@ async function handleInteraction(client, interaction) {
     try {
 
         // ===============================
-        // 🔹 EMBED BUILDER COMPONENTS (CRITICAL FIX)
+        // 🔹 BUILDER (CRITICAL)
         // ===============================
         if (
             interaction.isButton() ||
@@ -28,7 +30,7 @@ async function handleInteraction(client, interaction) {
         }
 
         // ===============================
-        // 🔹 ONLY SLASH COMMANDS BELOW
+        // 🔹 SLASH COMMANDS
         // ===============================
         if (!interaction.isChatInputCommand()) return;
 

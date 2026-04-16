@@ -87,7 +87,7 @@ client.once('clientReady', async () => {
     }
 });
 
-// ===== SINGLE INTERACTION ENTRY POINT (CRITICAL FIX) =====
+// ===== SINGLE ENTRY POINT =====
 client.on('interactionCreate', async (interaction) => {
     await handleInteraction(client, interaction);
 });
@@ -101,5 +101,4 @@ process.on('unhandledRejection', (err) => {
     console.error("❌ Unhandled rejection:", err);
 });
 
-// ===== LOGIN =====
 client.login(DISCORD_TOKEN);
