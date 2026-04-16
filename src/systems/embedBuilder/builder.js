@@ -12,7 +12,6 @@ const sessions = new Map();
 
 // ===== BUILD EMBED =====
 function buildEmbed(data) {
-
     const embed = new EmbedBuilder()
         .setColor(data.color || 0x2b2d31);
 
@@ -47,7 +46,6 @@ function buildEmbed(data) {
 
 // ===== UI =====
 function createUI(data) {
-
     const embed = buildEmbed(data);
 
     const row1 = new ActionRowBuilder().addComponents(
@@ -69,7 +67,7 @@ function createUI(data) {
     return { embeds: [embed], components: [row1, row2, row3] };
 }
 
-// ===== START =====
+// ===== START BUILDER =====
 async function startBuilder(interaction) {
 
     const data = {
@@ -84,7 +82,10 @@ async function startBuilder(interaction) {
         fields: []
     };
 
-    await interaction.reply(createUI(data));
+    // 🔥 CRITICAL FIX
+    await interaction.deferReply();
+
+    await interaction.editReply(createUI(data));
     const msg = await interaction.fetchReply();
 
     sessions.set(interaction.user.id, {
@@ -96,7 +97,7 @@ async function startBuilder(interaction) {
 
 // ===== UPDATE MESSAGE =====
 async function updateMessage(interaction, session) {
-    const channel = interaction.guild.channels.cache.get(session.channelId);
+    const channel = await interaction.client.channels.fetch(session.channelId);
     const msg = await channel.messages.fetch(session.messageId);
     await msg.edit(createUI(session.data));
 }
@@ -274,12 +275,15 @@ async function handleBuilder(interaction) {
             const embed = buildEmbed(data);
             await channel.send({ embeds: [embed] });
 
-            // delete builder
+            // 🔥 DELETE BUILDER (FIXED)
             try {
-                const builderChannel = interaction.guild.channels.cache.get(session.channelId);
+                const builderChannel = await interaction.client.channels.fetch(session.channelId);
                 const builderMsg = await builderChannel.messages.fetch(session.messageId);
                 await builderMsg.delete();
-            } catch {}
+                console.log("🧹 Builder deleted");
+            } catch (err) {
+                console.log("⚠️ Delete failed:", err.message);
+            }
 
             sessions.delete(interaction.user.id);
 
