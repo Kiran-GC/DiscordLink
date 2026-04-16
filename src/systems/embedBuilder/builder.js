@@ -5,7 +5,9 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    EmbedBuilder
+    EmbedBuilder,
+    ChannelSelectMenuBuilder,
+    ChannelType
 } = require('discord.js');
 
 const sessions = new Map();
@@ -122,7 +124,24 @@ async function handleBuilder(interaction) {
             return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
         }
 
-        // ADD FIELD
+        // ===== SUBMIT → CHANNEL DROPDOWN =====
+        if (interaction.customId === "eb_submit") {
+
+            const select = new ChannelSelectMenuBuilder()
+                .setCustomId("eb_channel_select")
+                .setPlaceholder("Select a channel")
+                .addChannelTypes(ChannelType.GuildText);
+
+            const row = new ActionRowBuilder().addComponents(select);
+
+            return interaction.reply({
+                content: "📍 Select the channel to send the embed:",
+                components: [row],
+                ephemeral: true
+            });
+        }
+
+        // ===== ADD FIELD =====
         if (interaction.customId === "eb_add_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_add")
@@ -143,7 +162,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // EDIT FIELD
+        // ===== EDIT FIELD =====
         if (interaction.customId === "eb_edit_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_edit")
@@ -164,7 +183,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // REMOVE FIELD
+        // ===== REMOVE FIELD =====
         if (interaction.customId === "eb_remove_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_remove")
@@ -179,6 +198,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // ===== CONTENT =====
         if (interaction.customId === "eb_content") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_content")
@@ -196,6 +216,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // ===== STYLE =====
         if (interaction.customId === "eb_style") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_style")
@@ -213,6 +234,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // ===== MEDIA =====
         if (interaction.customId === "eb_media") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_media")
@@ -230,6 +252,7 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
+        // ===== EXTRAS =====
         if (interaction.customId === "eb_extras") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_extras")
@@ -246,19 +269,35 @@ async function handleBuilder(interaction) {
 
             return interaction.showModal(modal);
         }
+    }
 
-        if (interaction.customId === "eb_submit") {
-            const modal = new ModalBuilder()
-                .setCustomId("modal_submit")
-                .setTitle("Send Embed");
+    // ===== CHANNEL SELECT =====
+    if (interaction.isChannelSelectMenu()) {
 
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("channel").setLabel("Channel (#channel or ID)").setStyle(TextInputStyle.Short)
-                )
-            );
+        if (interaction.customId === "eb_channel_select") {
 
-            return interaction.showModal(modal);
+            const channelId = interaction.values[0];
+            const channel = interaction.guild.channels.cache.get(channelId);
+
+            if (!channel) {
+                return interaction.reply({ content: "❌ Invalid channel.", ephemeral: true });
+            }
+
+            const embed = buildEmbed(session.data);
+            await channel.send({ embeds: [embed] });
+
+            try {
+                const builderChannel = await interaction.client.channels.fetch(session.channelId);
+                const builderMsg = await builderChannel.messages.fetch(session.messageId);
+                await builderMsg.delete();
+            } catch {}
+
+            sessions.delete(interaction.user.id);
+
+            return interaction.update({
+                content: "✅ Embed sent!",
+                components: []
+            });
         }
     }
 
@@ -325,32 +364,6 @@ async function handleBuilder(interaction) {
             data.author = d.getTextInputValue("author");
             const icon = d.getTextInputValue("icon");
             data.authorIcon = icon && icon.startsWith("http") ? icon : null;
-        }
-
-        if (interaction.customId === "modal_submit") {
-
-            const id = d.getTextInputValue("channel").replace(/[<#>]/g, "");
-            const channel = interaction.guild.channels.cache.get(id);
-
-            if (!channel) {
-                return interaction.reply({ content: "❌ Invalid channel.", ephemeral: true });
-            }
-
-            const embed = buildEmbed(data);
-            await channel.send({ embeds: [embed] });
-
-            try {
-                const builderChannel = await interaction.client.channels.fetch(session.channelId);
-                const builderMsg = await builderChannel.messages.fetch(session.messageId);
-                await builderMsg.delete();
-            } catch {}
-
-            sessions.delete(interaction.user.id);
-
-            return interaction.reply({
-                content: "✅ Embed sent.",
-                ephemeral: true
-            });
         }
 
         await interaction.deferUpdate();
