@@ -10,12 +10,23 @@ const {
 
 const sessions = new Map();
 
-// ===== BUILD EMBED =====
+// ===== BUILD EMBED (FIXED) =====
 function buildEmbed(data) {
+
     const embed = new EmbedBuilder()
-        .setTitle(data.title || null)
-        .setDescription(data.description || null)
         .setColor(data.color || 0x2b2d31);
+
+    const hasContent =
+        data.title ||
+        data.description ||
+        data.fields.length > 0;
+
+    if (hasContent) {
+        if (data.title) embed.setTitle(data.title);
+        if (data.description) embed.setDescription(data.description);
+    } else {
+        embed.setDescription("‎"); // invisible placeholder
+    }
 
     if (data.footer) embed.setFooter({ text: data.footer });
 
@@ -73,10 +84,8 @@ async function startBuilder(interaction) {
         fields: []
     };
 
-    const msg = await interaction.reply({
-        ...createUI(data),
-        fetchReply: true
-    });
+    await interaction.reply(createUI(data));
+    const msg = await interaction.fetchReply();
 
     sessions.set(interaction.user.id, {
         data,
@@ -117,10 +126,18 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("title").setLabel("Title").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("title")
+                        .setLabel("Title")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("desc").setLabel("Description").setStyle(TextInputStyle.Paragraph).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("desc")
+                        .setLabel("Description")
+                        .setStyle(TextInputStyle.Paragraph)
+                        .setRequired(false)
                 )
             );
 
@@ -134,10 +151,18 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("color").setLabel("Hex Color").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("color")
+                        .setLabel("Hex Color (#ff0000)")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("footer").setLabel("Footer").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("footer")
+                        .setLabel("Footer")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 )
             );
 
@@ -151,13 +176,23 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("fname").setLabel("Field Name").setStyle(TextInputStyle.Short)
+                    new TextInputBuilder()
+                        .setCustomId("fname")
+                        .setLabel("Field Name")
+                        .setStyle(TextInputStyle.Short)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("fvalue").setLabel("Field Value").setStyle(TextInputStyle.Paragraph)
+                    new TextInputBuilder()
+                        .setCustomId("fvalue")
+                        .setLabel("Field Value")
+                        .setStyle(TextInputStyle.Paragraph)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("code").setLabel("Use Code Block? (yes/no)").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("code")
+                        .setLabel("Use Code Block? (yes/no)")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 )
             );
 
@@ -171,10 +206,18 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("thumbnail").setLabel("Thumbnail URL").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("thumbnail")
+                        .setLabel("Thumbnail URL")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("image").setLabel("Image URL").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("image")
+                        .setLabel("Image URL")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 )
             );
 
@@ -188,10 +231,18 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("author").setLabel("Author Name").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("author")
+                        .setLabel("Author Name")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("icon").setLabel("Author Icon URL").setStyle(TextInputStyle.Short).setRequired(false)
+                    new TextInputBuilder()
+                        .setCustomId("icon")
+                        .setLabel("Author Icon URL")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(false)
                 )
             );
 
