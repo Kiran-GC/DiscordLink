@@ -74,8 +74,16 @@ function createUI(data) {
     return { embeds: [embed], components: [row1, row2, row3, row4] };
 }
 
-// ===== START =====
+// ===== START BUILDER =====
 async function startBuilder(interaction) {
+
+    // 🔥 CRITICAL: ACK IMMEDIATELY
+    try {
+        await interaction.deferReply();
+    } catch (err) {
+        console.log("⚠️ Defer failed:", err.message);
+        return;
+    }
 
     const data = {
         title: "",
@@ -89,23 +97,30 @@ async function startBuilder(interaction) {
         fields: []
     };
 
-    await interaction.deferReply();
-    await interaction.editReply(createUI(data));
+    try {
+        await interaction.editReply(createUI(data));
+        const msg = await interaction.fetchReply();
 
-    const msg = await interaction.fetchReply();
+        sessions.set(interaction.user.id, {
+            data,
+            messageId: msg.id,
+            channelId: msg.channel.id
+        });
 
-    sessions.set(interaction.user.id, {
-        data,
-        messageId: msg.id,
-        channelId: msg.channel.id
-    });
+    } catch (err) {
+        console.log("❌ Builder init failed:", err.message);
+    }
 }
 
-// ===== UPDATE =====
+// ===== UPDATE MESSAGE =====
 async function updateMessage(interaction, session) {
-    const channel = await interaction.client.channels.fetch(session.channelId);
-    const msg = await channel.messages.fetch(session.messageId);
-    await msg.edit(createUI(session.data));
+    try {
+        const channel = await interaction.client.channels.fetch(session.channelId);
+        const msg = await channel.messages.fetch(session.messageId);
+        await msg.edit(createUI(session.data));
+    } catch (err) {
+        console.log("⚠️ Update failed:", err.message);
+    }
 }
 
 // ===== HANDLER =====
@@ -124,7 +139,7 @@ async function handleBuilder(interaction) {
             return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
         }
 
-        // ===== SUBMIT → CHANNEL DROPDOWN =====
+        // ===== SUBMIT (DROPDOWN) =====
         if (interaction.customId === "eb_submit") {
 
             const select = new ChannelSelectMenuBuilder()
@@ -135,7 +150,7 @@ async function handleBuilder(interaction) {
             const row = new ActionRowBuilder().addComponents(select);
 
             return interaction.reply({
-                content: "📍 Select the channel to send the embed:",
+                content: "📍 Select a channel:",
                 components: [row],
                 ephemeral: true
             });
@@ -170,7 +185,7 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("index").setLabel("Field Number (1,2,3...)").setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("index").setLabel("Field Number").setStyle(TextInputStyle.Short)
                 ),
                 new ActionRowBuilder().addComponents(
                     new TextInputBuilder().setCustomId("fname").setLabel("New Name").setStyle(TextInputStyle.Short)
@@ -191,7 +206,7 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("index").setLabel("Field Number to Remove").setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("index").setLabel("Field Number").setStyle(TextInputStyle.Short)
                 )
             );
 
@@ -272,33 +287,29 @@ async function handleBuilder(interaction) {
     }
 
     // ===== CHANNEL SELECT =====
-    if (interaction.isChannelSelectMenu()) {
+    if (interaction.isChannelSelectMenu() && interaction.customId === "eb_channel_select") {
 
-        if (interaction.customId === "eb_channel_select") {
+        const channelId = interaction.values[0];
+        const channel = interaction.guild.channels.cache.get(channelId);
 
-            const channelId = interaction.values[0];
-            const channel = interaction.guild.channels.cache.get(channelId);
-
-            if (!channel) {
-                return interaction.reply({ content: "❌ Invalid channel.", ephemeral: true });
-            }
-
-            const embed = buildEmbed(session.data);
-            await channel.send({ embeds: [embed] });
-
-            try {
-                const builderChannel = await interaction.client.channels.fetch(session.channelId);
-                const builderMsg = await builderChannel.messages.fetch(session.messageId);
-                await builderMsg.delete();
-            } catch {}
-
-            sessions.delete(interaction.user.id);
-
-            return interaction.update({
-                content: "✅ Embed sent!",
-                components: []
-            });
+        if (!channel) {
+            return interaction.reply({ content: "❌ Invalid channel.", ephemeral: true });
         }
+
+        await channel.send({ embeds: [buildEmbed(data)] });
+
+        try {
+            const builderChannel = await interaction.client.channels.fetch(session.channelId);
+            const builderMsg = await builderChannel.messages.fetch(session.messageId);
+            await builderMsg.delete();
+        } catch {}
+
+        sessions.delete(interaction.user.id);
+
+        return interaction.update({
+            content: "✅ Embed sent!",
+            components: []
+        });
     }
 
     // ===== MODALS =====
@@ -324,20 +335,14 @@ async function handleBuilder(interaction) {
                 value = `\`\`\`\n${value}\n\`\`\``;
             }
 
-            data.fields.push({
-                name: d.getTextInputValue("fname"),
-                value,
-                inline: false
-            });
+            data.fields.push({ name: d.getTextInputValue("fname"), value, inline: false });
         }
 
         if (interaction.customId === "modal_field_edit") {
             const index = parseInt(d.getTextInputValue("index")) - 1;
-
             if (isNaN(index) || !data.fields[index]) {
-                return interaction.reply({ content: "❌ Invalid field number.", ephemeral: true });
+                return interaction.reply({ content: "❌ Invalid field.", ephemeral: true });
             }
-
             data.fields[index] = {
                 name: d.getTextInputValue("fname"),
                 value: d.getTextInputValue("fvalue"),
@@ -347,11 +352,9 @@ async function handleBuilder(interaction) {
 
         if (interaction.customId === "modal_field_remove") {
             const index = parseInt(d.getTextInputValue("index")) - 1;
-
             if (isNaN(index) || !data.fields[index]) {
-                return interaction.reply({ content: "❌ Invalid field number.", ephemeral: true });
+                return interaction.reply({ content: "❌ Invalid field.", ephemeral: true });
             }
-
             data.fields.splice(index, 1);
         }
 
