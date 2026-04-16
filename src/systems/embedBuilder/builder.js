@@ -74,14 +74,12 @@ function createUI(data) {
     return { embeds: [embed], components: [row1, row2, row3, row4] };
 }
 
-// ===== START BUILDER =====
+// ===== START =====
 async function startBuilder(interaction) {
 
-    // 🔥 CRITICAL: ACK IMMEDIATELY
     try {
         await interaction.deferReply();
-    } catch (err) {
-        console.log("⚠️ Defer failed:", err.message);
+    } catch {
         return;
     }
 
@@ -112,7 +110,7 @@ async function startBuilder(interaction) {
     }
 }
 
-// ===== UPDATE MESSAGE =====
+// ===== UPDATE =====
 async function updateMessage(interaction, session) {
     try {
         const channel = await interaction.client.channels.fetch(session.channelId);
@@ -139,7 +137,6 @@ async function handleBuilder(interaction) {
             return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
         }
 
-        // ===== SUBMIT (DROPDOWN) =====
         if (interaction.customId === "eb_submit") {
 
             const select = new ChannelSelectMenuBuilder()
@@ -156,7 +153,6 @@ async function handleBuilder(interaction) {
             });
         }
 
-        // ===== ADD FIELD =====
         if (interaction.customId === "eb_add_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_add")
@@ -177,7 +173,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // ===== EDIT FIELD =====
         if (interaction.customId === "eb_edit_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_edit")
@@ -198,7 +193,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // ===== REMOVE FIELD =====
         if (interaction.customId === "eb_remove_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_remove")
@@ -213,7 +207,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // ===== CONTENT =====
         if (interaction.customId === "eb_content") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_content")
@@ -231,7 +224,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // ===== STYLE =====
         if (interaction.customId === "eb_style") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_style")
@@ -249,7 +241,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // ===== MEDIA =====
         if (interaction.customId === "eb_media") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_media")
@@ -267,7 +258,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // ===== EXTRAS =====
         if (interaction.customId === "eb_extras") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_extras")
@@ -312,8 +302,12 @@ async function handleBuilder(interaction) {
         });
     }
 
-    // ===== MODALS =====
+    // ===== MODALS (FIXED) =====
     if (interaction.isModalSubmit()) {
+
+        try {
+            await interaction.deferReply({ ephemeral: true });
+        } catch {}
 
         const d = interaction.fields;
 
@@ -340,9 +334,7 @@ async function handleBuilder(interaction) {
 
         if (interaction.customId === "modal_field_edit") {
             const index = parseInt(d.getTextInputValue("index")) - 1;
-            if (isNaN(index) || !data.fields[index]) {
-                return interaction.reply({ content: "❌ Invalid field.", ephemeral: true });
-            }
+            if (!data.fields[index]) return;
             data.fields[index] = {
                 name: d.getTextInputValue("fname"),
                 value: d.getTextInputValue("fvalue"),
@@ -352,9 +344,7 @@ async function handleBuilder(interaction) {
 
         if (interaction.customId === "modal_field_remove") {
             const index = parseInt(d.getTextInputValue("index")) - 1;
-            if (isNaN(index) || !data.fields[index]) {
-                return interaction.reply({ content: "❌ Invalid field.", ephemeral: true });
-            }
+            if (!data.fields[index]) return;
             data.fields.splice(index, 1);
         }
 
@@ -369,8 +359,11 @@ async function handleBuilder(interaction) {
             data.authorIcon = icon && icon.startsWith("http") ? icon : null;
         }
 
-        await interaction.deferUpdate();
         await updateMessage(interaction, session);
+
+        try {
+            await interaction.deleteReply();
+        } catch {}
     }
 }
 
