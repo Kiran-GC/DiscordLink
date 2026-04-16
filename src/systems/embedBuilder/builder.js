@@ -25,7 +25,7 @@ function buildEmbed(data) {
         if (data.title) embed.setTitle(data.title);
         if (data.description) embed.setDescription(data.description);
     } else {
-        embed.setDescription("‎"); // invisible placeholder
+        embed.setDescription("‎");
     }
 
     if (data.footer) embed.setFooter({ text: data.footer });
@@ -117,7 +117,6 @@ async function handleBuilder(interaction) {
             return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
         }
 
-        // ✏️ CONTENT
         if (interaction.customId === "eb_content") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_content")
@@ -125,25 +124,16 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("title")
-                        .setLabel("Title")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("title").setLabel("Title").setStyle(TextInputStyle.Short).setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("desc")
-                        .setLabel("Description")
-                        .setStyle(TextInputStyle.Paragraph)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("desc").setLabel("Description").setStyle(TextInputStyle.Paragraph).setRequired(false)
                 )
             );
 
             return interaction.showModal(modal);
         }
 
-        // 🎨 STYLE
         if (interaction.customId === "eb_style") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_style")
@@ -151,25 +141,16 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("color")
-                        .setLabel("Hex Color (#ff0000)")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("color").setLabel("Hex Color").setStyle(TextInputStyle.Short).setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("footer")
-                        .setLabel("Footer")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("footer").setLabel("Footer").setStyle(TextInputStyle.Short).setRequired(false)
                 )
             );
 
             return interaction.showModal(modal);
         }
 
-        // ➕ FIELDS
         if (interaction.customId === "eb_fields") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field")
@@ -177,30 +158,19 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("fname")
-                        .setLabel("Field Name")
-                        .setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("fname").setLabel("Field Name").setStyle(TextInputStyle.Short)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("fvalue")
-                        .setLabel("Field Value")
-                        .setStyle(TextInputStyle.Paragraph)
+                    new TextInputBuilder().setCustomId("fvalue").setLabel("Field Value").setStyle(TextInputStyle.Paragraph)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("code")
-                        .setLabel("Use Code Block? (yes/no)")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("code").setLabel("Use Code Block? (yes/no)").setStyle(TextInputStyle.Short).setRequired(false)
                 )
             );
 
             return interaction.showModal(modal);
         }
 
-        // 🖼️ MEDIA
         if (interaction.customId === "eb_media") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_media")
@@ -208,25 +178,16 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("thumbnail")
-                        .setLabel("Thumbnail URL")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("thumbnail").setLabel("Thumbnail URL").setStyle(TextInputStyle.Short).setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("image")
-                        .setLabel("Image URL")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("image").setLabel("Image URL").setStyle(TextInputStyle.Short).setRequired(false)
                 )
             );
 
             return interaction.showModal(modal);
         }
 
-        // ⚙️ EXTRAS
         if (interaction.customId === "eb_extras") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_extras")
@@ -234,25 +195,16 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("author")
-                        .setLabel("Author Name")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("author").setLabel("Author Name").setStyle(TextInputStyle.Short).setRequired(false)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("icon")
-                        .setLabel("Author Icon URL")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(false)
+                    new TextInputBuilder().setCustomId("icon").setLabel("Author Icon URL").setStyle(TextInputStyle.Short).setRequired(false)
                 )
             );
 
             return interaction.showModal(modal);
         }
 
-        // ✅ SUBMIT (FIXED)
         if (interaction.customId === "eb_submit") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_submit")
@@ -260,10 +212,7 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("channel")
-                        .setLabel("Channel (#channel or ID)")
-                        .setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("channel").setLabel("Channel (#channel or ID)").setStyle(TextInputStyle.Short)
                 )
             );
 
@@ -288,7 +237,6 @@ async function handleBuilder(interaction) {
         }
 
         if (interaction.customId === "modal_field") {
-
             let value = d.getTextInputValue("fvalue");
 
             if (d.getTextInputValue("code")?.toLowerCase() === "yes") {
@@ -311,11 +259,7 @@ async function handleBuilder(interaction) {
             data.author = d.getTextInputValue("author");
 
             const icon = d.getTextInputValue("icon");
-            if (icon && icon.startsWith("http")) {
-                data.authorIcon = icon;
-            } else {
-                data.authorIcon = null;
-            }
+            data.authorIcon = icon && icon.startsWith("http") ? icon : null;
         }
 
         if (interaction.customId === "modal_submit") {
@@ -324,23 +268,18 @@ async function handleBuilder(interaction) {
             const channel = interaction.guild.channels.cache.get(id);
 
             if (!channel) {
-                return interaction.reply({
-                    content: "❌ Invalid channel.",
-                    ephemeral: true
-                });
+                return interaction.reply({ content: "❌ Invalid channel.", ephemeral: true });
             }
 
             const embed = buildEmbed(data);
             await channel.send({ embeds: [embed] });
 
-            // 🔥 Delete builder message
+            // delete builder
             try {
                 const builderChannel = interaction.guild.channels.cache.get(session.channelId);
                 const builderMsg = await builderChannel.messages.fetch(session.messageId);
                 await builderMsg.delete();
-            } catch (err) {
-                // ignore (message might already be deleted)
-            }
+            } catch {}
 
             sessions.delete(interaction.user.id);
 
@@ -348,7 +287,6 @@ async function handleBuilder(interaction) {
                 content: "✅ Embed sent and builder closed.",
                 ephemeral: true
             });
-        }
         }
 
         await interaction.deferUpdate();
