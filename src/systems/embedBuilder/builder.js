@@ -10,9 +10,17 @@ const {
 
 const sessions = new Map();
 
+// ===== SAFE RESPONDER =====
+async function safeUpdate(interaction, payload) {
+    if (interaction.deferred || interaction.replied) {
+        return interaction.editReply(payload);
+    } else {
+        return interaction.reply({ ...payload, ephemeral: true });
+    }
+}
+
 // ===== UI =====
 function createUI(data) {
-
     const embed = new EmbedBuilder()
         .setTitle(data.title || "Embed Title")
         .setDescription(data.description || "Embed Description")
@@ -44,7 +52,6 @@ function createUI(data) {
 
 // ===== START =====
 function startBuilder(interaction) {
-
     sessions.set(interaction.user.id, {
         title: "",
         description: "",
@@ -232,7 +239,7 @@ async function handleBuilder(interaction) {
             return interaction.reply({ content: "✅ Embed sent!", ephemeral: true });
         }
 
-        return interaction.update(createUI(data));
+        return safeUpdate(interaction, createUI(data));
     }
 }
 

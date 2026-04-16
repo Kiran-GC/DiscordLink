@@ -5,11 +5,13 @@ const { handleInteraction } = require('./handler');
 const { dynamicPresence } = require('../systems/presence');
 const { loadPanel, savePanel } = require('../utils/storage');
 const { setMessage, startUpdater } = require('../systems/updater');
-const { handleBuilder } = require('../systems/embedBuilder/builder');
 
-// ⭐ Tutorials
+// Tutorials
 const { handleTutorials, upsertPanel } = require('../systems/tutorials/tutorials');
 const { TUTORIAL_CHANNEL_ID } = require('../systems/tutorials/config');
+
+// Embed Builder
+const { handleBuilder } = require('../systems/embedBuilder/builder');
 
 const client = new Client({
     intents: [
@@ -28,7 +30,7 @@ client.once('ready', async () => {
         { body: commands.map(c => c.toJSON()) }
     );
 
-    // ===== PRESENCE =====
+    // Presence
     setInterval(() => dynamicPresence(client), 20000);
     dynamicPresence(client);
 
@@ -76,7 +78,7 @@ client.once('ready', async () => {
         console.log("⚠️ No panel found. Use /serverstat to create one.");
     }
 
-    // ===== TUTORIAL PANEL (ALWAYS UPDATE) =====
+    // ===== TUTORIAL PANEL UPSERT =====
     try {
         const tutorialChannel = await client.channels.fetch(TUTORIAL_CHANNEL_ID);
         await upsertPanel(client, tutorialChannel);
@@ -85,17 +87,29 @@ client.once('ready', async () => {
     }
 });
 
-// ===== INTERACTIONS =====
-client.on('interactionCreate', interaction => {
-    handleInteraction(client, interaction);
-    handleTutorials(interaction, client);
-});
+// ===== INTERACTION ROUTING (FIXED) =====
+client.on('interactionCreate', async (interaction) => {
 
-// ===== EMBEDBUILDER =====
-client.on('interactionCreate', interaction => {
-    handleInteraction(client, interaction);
-    handleTutorials(interaction, client);
-    handleBuilder(interaction);
+    try {
+        // ===== COMMANDS =====
+        if (interaction.isChatInputCommand()) {
+            return handleInteraction(client, interaction);
+        }
+
+        // ===== TUTORIAL SYSTEM =====
+        if (interaction.isStringSelectMenu() || interaction.isButton()) {
+            const handled = await handleTutorials(interaction, client);
+            if (handled) return;
+        }
+
+        // ===== EMBED BUILDER =====
+        if (interaction.isButton() || interaction.isModalSubmit()) {
+            return handleBuilder(interaction);
+        }
+
+    } catch (err) {
+        console.log("❌ Interaction error:", err);
+    }
 });
 
 client.login(DISCORD_TOKEN);
