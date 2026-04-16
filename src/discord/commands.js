@@ -10,13 +10,17 @@ const commands = [
         .setDescription('Check any Minecraft server')
         .addStringOption(opt =>
             opt.setName('ip')
-                .setDescription('Server IP (with optional port)')
+                .setDescription('Server IP')
                 .setRequired(true)
         ),
 
     new SlashCommandBuilder()
         .setName('tutorials')
-        .setDescription('Create or update tutorial panel')
+        .setDescription('Create or update tutorial panel'),
+
+    new SlashCommandBuilder()
+        .setName('embed')
+        .setDescription('Open embed builder')
 ];
 
 module.exports = { commands };

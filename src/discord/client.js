@@ -5,6 +5,7 @@ const { handleInteraction } = require('./handler');
 const { dynamicPresence } = require('../systems/presence');
 const { loadPanel, savePanel } = require('../utils/storage');
 const { setMessage, startUpdater } = require('../systems/updater');
+const { handleBuilder } = require('../systems/embedBuilder/builder');
 
 // ⭐ Tutorials
 const { handleTutorials, upsertPanel } = require('../systems/tutorials/tutorials');
@@ -88,6 +89,13 @@ client.once('ready', async () => {
 client.on('interactionCreate', interaction => {
     handleInteraction(client, interaction);
     handleTutorials(interaction, client);
+});
+
+// ===== EMBEDBUILDER =====
+client.on('interactionCreate', interaction => {
+    handleInteraction(client, interaction);
+    handleTutorials(interaction, client);
+    handleBuilder(interaction);
 });
 
 client.login(DISCORD_TOKEN);

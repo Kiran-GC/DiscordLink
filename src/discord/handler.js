@@ -6,6 +6,7 @@ const { hasAccess } = require('../utils/permissions');
 const { startUpdater, setMessage } = require('../systems/updater');
 const { CHANNEL_ID, MC_HOST, MC_PORT } = require('../config/config');
 const { AttachmentBuilder } = require('discord.js');
+const { startBuilder } = require('../systems/embedBuilder/builder');
 
 // ⭐ Tutorials
 const { upsertPanel } = require('../systems/tutorials/tutorials');
@@ -87,6 +88,11 @@ async function handleInteraction(client, interaction) {
                 content: "✅ Tutorial panel updated.",
                 ephemeral: true
             });
+        }
+        // ===== EMBED BUILDER =====
+        if (interaction.commandName === 'embed') {
+        
+            return startBuilder(interaction);
         }
 
     } catch (err) {
