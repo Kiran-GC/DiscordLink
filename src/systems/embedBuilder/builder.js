@@ -318,7 +318,6 @@ async function handleBuilder(interaction) {
             }
         }
 
-        // ✅ FINAL SEND
         if (interaction.customId === "modal_submit") {
 
             const id = d.getTextInputValue("channel").replace(/[<#>]/g, "");
@@ -334,12 +333,22 @@ async function handleBuilder(interaction) {
             const embed = buildEmbed(data);
             await channel.send({ embeds: [embed] });
 
+            // 🔥 Delete builder message
+            try {
+                const builderChannel = interaction.guild.channels.cache.get(session.channelId);
+                const builderMsg = await builderChannel.messages.fetch(session.messageId);
+                await builderMsg.delete();
+            } catch (err) {
+                // ignore (message might already be deleted)
+            }
+
             sessions.delete(interaction.user.id);
 
             return interaction.reply({
-                content: "✅ Embed sent successfully.",
+                content: "✅ Embed sent and builder closed.",
                 ephemeral: true
             });
+        }
         }
 
         await interaction.deferUpdate();
