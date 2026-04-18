@@ -77,8 +77,8 @@ function createUI(data) {
 // ===== START =====
 async function startBuilder(interaction) {
 
-    // 🔐 Permission lock (extra safety)
-    if (!hasAccess(interaction.member)) {
+    // 🔐 Permission check
+    if (!hasAccess(interaction)) {
         return interaction.reply({
             content: "❌ You don’t have permission.",
             ephemeral: true
@@ -97,7 +97,7 @@ async function startBuilder(interaction) {
         fields: []
     };
 
-    // ✅ FIXED: use reply instead of defer + edit
+    // ✅ FIX: NO deferReply
     await interaction.reply(createUI(data));
 
     const msg = await interaction.fetchReply();
@@ -119,8 +119,8 @@ async function updateMessage(interaction, session) {
 // ===== HANDLER =====
 async function handleBuilder(interaction) {
 
-    // 🔐 Permission lock for ALL interactions
-    if (!hasAccess(interaction.member)) return;
+    // 🔐 Lock all interactions
+    if (!hasAccess(interaction)) return;
 
     const session = sessions.get(interaction.user.id);
     if (!session) return;
@@ -162,7 +162,7 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("index").setLabel("Field Number").setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("index").setLabel("Field Number (1,2,3...)").setStyle(TextInputStyle.Short)
                 ),
                 new ActionRowBuilder().addComponents(
                     new TextInputBuilder().setCustomId("fname").setLabel("New Name").setStyle(TextInputStyle.Short)
@@ -182,7 +182,7 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("index").setLabel("Field Number").setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("index").setLabel("Field Number to Remove").setStyle(TextInputStyle.Short)
                 )
             );
 

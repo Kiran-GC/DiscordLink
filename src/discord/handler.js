@@ -39,7 +39,7 @@ async function handleInteraction(client, interaction) {
         // ===== SERVER PANEL =====
         if (interaction.commandName === 'serverstat') {
 
-            if (!hasAccess(interaction.member)) {
+            if (!hasAccess(interaction)) {
                 return interaction.reply({
                     content: "❌ You don’t have permission.",
                     ephemeral: true
@@ -111,7 +111,6 @@ async function handleInteraction(client, interaction) {
         // ===== EMBED BUILDER =====
         if (interaction.commandName === 'embed') {
 
-            // 🔐 ADDED PERMISSION CHECK
             if (!hasAccess(interaction)) {
                 return interaction.reply({
                     content: "❌ You don’t have permission.",
