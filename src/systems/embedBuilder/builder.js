@@ -85,6 +85,14 @@ async function startBuilder(interaction) {
         });
     }
 
+    // 🚫 Session limit (1 per user)
+    if (sessions.has(interaction.user.id)) {
+        return interaction.reply({
+            content: "⚠️ You already have an active embed session. Finish or cancel it first.",
+            ephemeral: true
+        });
+    }
+
     const data = {
         title: "",
         description: "",
@@ -97,17 +105,42 @@ async function startBuilder(interaction) {
         fields: []
     };
 
-    // ✅ FIX: Proper Discord lifecycle
+    // ✅ Proper interaction handling
     await interaction.deferReply();
     await interaction.editReply(createUI(data));
 
     const msg = await interaction.fetchReply();
 
+    // ✅ Store session
     sessions.set(interaction.user.id, {
         data,
         messageId: msg.id,
-        channelId: msg.channel.id
+        channelId: msg.channel.id,
+        timeout: null
     });
+
+    // ⏳ Session timeout (10 mins)
+    const timeout = setTimeout(async () => {
+        try {
+            const session = sessions.get(interaction.user.id);
+            if (!session) return;
+
+            const channel = await interaction.client.channels.fetch(session.channelId);
+            const message = await channel.messages.fetch(session.messageId);
+
+            await message.edit({
+                content: "⌛ Session expired.",
+                embeds: [],
+                components: []
+            });
+        } catch {}
+
+        sessions.delete(interaction.user.id);
+
+    }, 10 * 60 * 1000);
+
+    // store timeout reference
+    sessions.get(interaction.user.id).timeout = timeout;
 }
 
 // ===== UPDATE =====
@@ -132,8 +165,17 @@ async function handleBuilder(interaction) {
     if (interaction.isButton()) {
 
         if (interaction.customId === "eb_cancel") {
+            const session = sessions.get(interaction.user.id);
+
+            if (session?.timeout) clearTimeout(session.timeout);
+
             sessions.delete(interaction.user.id);
-            return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
+
+            return interaction.update({
+                content: "Cancelled.",
+                embeds: [],
+                components: []
+            });
         }
 
         if (interaction.customId === "eb_add_field") {
@@ -355,7 +397,8 @@ async function handleBuilder(interaction) {
                 const builderMsg = await builderChannel.messages.fetch(session.messageId);
                 await builderMsg.delete();
             } catch {}
-
+            const session = sessions.get(interaction.user.id);
+            if (session?.timeout) clearTimeout(session.timeout);
             sessions.delete(interaction.user.id);
 
             return interaction.reply({
