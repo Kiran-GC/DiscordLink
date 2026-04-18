@@ -110,6 +110,15 @@ async function handleInteraction(client, interaction) {
 
         // ===== EMBED BUILDER =====
         if (interaction.commandName === 'embed') {
+
+            // 🔐 ADDED PERMISSION CHECK
+            if (!hasAccess(interaction)) {
+                return interaction.reply({
+                    content: "❌ You don’t have permission.",
+                    ephemeral: true
+                });
+            }
+
             return startBuilder(interaction);
         }
 
