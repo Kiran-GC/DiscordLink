@@ -97,8 +97,9 @@ async function startBuilder(interaction) {
         fields: []
     };
 
-    // ✅ FIX: NO deferReply
-    await interaction.reply(createUI(data));
+    // ✅ FIX: Proper Discord lifecycle
+    await interaction.deferReply();
+    await interaction.editReply(createUI(data));
 
     const msg = await interaction.fetchReply();
 
