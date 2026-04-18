@@ -20,7 +20,12 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('embed')
-        .setDescription('Open embed builder')
+        .setDescription('Open embed builder'),
+
+    // 🆕 ADD THIS
+    new SlashCommandBuilder()
+        .setName('ping')
+        .setDescription('Check bot latency')
 ];
 
 module.exports = { commands };

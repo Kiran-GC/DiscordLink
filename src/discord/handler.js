@@ -122,6 +122,27 @@ async function handleInteraction(client, interaction) {
             return handleBuilder(interaction);
         }
 
+        // ===============================
+        // 🔹 PING COMMAND
+        // ===============================
+        
+        if (interaction.commandName === 'ping') {
+
+            const sent = Date.now();
+
+            await interaction.reply({
+                content: "🏓 Pinging...",
+                ephemeral: true
+            });
+
+            const latency = Date.now() - sent;
+            const apiPing = Math.round(interaction.client.ws.ping);
+
+            await interaction.editReply({
+                content: `🏓 Pong!\nLatency: ${latency}ms\nAPI: ${apiPing}ms`
+            });
+        }
+
     } catch (err) {
         console.log("❌ Interaction Error:", err);
     }
