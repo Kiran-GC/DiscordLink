@@ -39,7 +39,7 @@ async function handleInteraction(client, interaction) {
         // ===== SERVER PANEL =====
         if (interaction.commandName === 'serverstat') {
 
-            if (!hasAccess(interaction)) {
+            if (!hasAccess(interaction.member)) {
                 return interaction.reply({
                     content: "❌ You don’t have permission.",
                     ephemeral: true

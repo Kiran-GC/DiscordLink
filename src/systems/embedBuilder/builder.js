@@ -8,6 +8,8 @@ const {
     EmbedBuilder
 } = require('discord.js');
 
+const { hasAccess } = require('../../utils/permissions');
+
 const sessions = new Map();
 
 // ===== BUILD EMBED =====
@@ -75,6 +77,14 @@ function createUI(data) {
 // ===== START =====
 async function startBuilder(interaction) {
 
+    // 🔐 Permission lock (extra safety)
+    if (!hasAccess(interaction.member)) {
+        return interaction.reply({
+            content: "❌ You don’t have permission.",
+            ephemeral: true
+        });
+    }
+
     const data = {
         title: "",
         description: "",
@@ -87,8 +97,8 @@ async function startBuilder(interaction) {
         fields: []
     };
 
-    await interaction.deferReply();
-    await interaction.editReply(createUI(data));
+    // ✅ FIXED: use reply instead of defer + edit
+    await interaction.reply(createUI(data));
 
     const msg = await interaction.fetchReply();
 
@@ -109,6 +119,9 @@ async function updateMessage(interaction, session) {
 // ===== HANDLER =====
 async function handleBuilder(interaction) {
 
+    // 🔐 Permission lock for ALL interactions
+    if (!hasAccess(interaction.member)) return;
+
     const session = sessions.get(interaction.user.id);
     if (!session) return;
 
@@ -122,7 +135,6 @@ async function handleBuilder(interaction) {
             return interaction.update({ content: "Cancelled.", embeds: [], components: [] });
         }
 
-        // ADD FIELD
         if (interaction.customId === "eb_add_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_add")
@@ -143,7 +155,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // EDIT FIELD
         if (interaction.customId === "eb_edit_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_edit")
@@ -151,7 +162,7 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("index").setLabel("Field Number (1,2,3...)").setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("index").setLabel("Field Number").setStyle(TextInputStyle.Short)
                 ),
                 new ActionRowBuilder().addComponents(
                     new TextInputBuilder().setCustomId("fname").setLabel("New Name").setStyle(TextInputStyle.Short)
@@ -164,7 +175,6 @@ async function handleBuilder(interaction) {
             return interaction.showModal(modal);
         }
 
-        // REMOVE FIELD
         if (interaction.customId === "eb_remove_field") {
             const modal = new ModalBuilder()
                 .setCustomId("modal_field_remove")
@@ -172,7 +182,7 @@ async function handleBuilder(interaction) {
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
-                    new TextInputBuilder().setCustomId("index").setLabel("Field Number to Remove").setStyle(TextInputStyle.Short)
+                    new TextInputBuilder().setCustomId("index").setLabel("Field Number").setStyle(TextInputStyle.Short)
                 )
             );
 
