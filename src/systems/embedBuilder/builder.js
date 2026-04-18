@@ -106,8 +106,11 @@ async function startBuilder(interaction) {
     };
 
     // ✅ Proper interaction handling
-    await interaction.deferReply();
-    await interaction.editReply(createUI(data));
+    if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(createUI(data));
+    } else {
+        await interaction.reply(createUI(data));
+    }
 
     const msg = await interaction.fetchReply();
 
