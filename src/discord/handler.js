@@ -1,7 +1,8 @@
 const { commandMap } = require('./commands');
 const {
     botMissingPermissionsReply,
-    unknownCommandReply
+    unknownCommandReply,
+    ephemeralReply
 } = require('../utils/interactionReplies');
 const { isMissingPermissionsError } = require('../utils/discordErrors');
 
@@ -28,10 +29,7 @@ async function handleInteraction(client, interaction) {
         }
 
         if (!interaction.replied && !interaction.deferred) {
-            return interaction.reply({
-                content: '❌ Something went wrong while running that command.',
-                flags: botMissingPermissionsReply().flags
-            });
+            return interaction.reply(ephemeralReply('❌ Something went wrong while running that command.'));
         }
     }
 }
