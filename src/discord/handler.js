@@ -6,7 +6,7 @@ const { savePanel, loadPanel } = require('../utils/storage');
 const { hasAccess } = require('../utils/permissions');
 const { startUpdater, setMessage } = require('../systems/updater');
 const { CHANNEL_ID, MC_HOST, MC_PORT } = require('../config/config');
-const { AttachmentBuilder } = require('discord.js');
+const { AttachmentBuilder, MessageFlags } = require('discord.js');
 
 // Embed Builder
 const { startBuilder, handleBuilder } = require('../systems/embedBuilder/builder');
@@ -30,7 +30,7 @@ async function handleInteraction(client, interaction) {
                 if (!hasAccess(interaction)) {
                     return interaction.reply({
                         content: "❌ You don’t have permission.",
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
@@ -56,7 +56,7 @@ async function handleInteraction(client, interaction) {
                 setMessage(msg);
                 startUpdater(channel);
 
-                return interaction.reply({ content: "✅ Panel updated!", ephemeral: true });
+                return interaction.reply({ content: "✅ Panel updated!", flags: MessageFlags.Ephemeral });
             }
 
             // ===== MC SRV =====
@@ -89,7 +89,7 @@ async function handleInteraction(client, interaction) {
                 if (!hasAccess(interaction)) {
                     return interaction.reply({
                         content: "❌ You don’t have permission.",
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
@@ -98,7 +98,7 @@ async function handleInteraction(client, interaction) {
 
                 return interaction.reply({
                     content: "✅ Tutorial panel updated.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -108,7 +108,7 @@ async function handleInteraction(client, interaction) {
                 if (!hasAccess(interaction)) {
                     return interaction.reply({
                         content: "❌ You don’t have permission.",
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
@@ -122,7 +122,7 @@ async function handleInteraction(client, interaction) {
 
                 await interaction.reply({
                     content: "🏓 Pinging...",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
 
                 const latency = Date.now() - sent;
