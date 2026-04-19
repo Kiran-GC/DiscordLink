@@ -1,6 +1,8 @@
 const { getStatus } = require('../mc/status');
 const { buildEmbed } = require('../embeds/mainEmbed');
 const { MC_HOST, MC_PORT, NOTIFY_ROLE_ID } = require('../config/config');
+const { clearPanel } = require('../utils/storage');
+const { isMissingPermissionsError, isUnknownMessageError } = require('../utils/discordErrors');
 
 let updaterTimeout = null;
 let lastData = null;
@@ -10,7 +12,6 @@ function setMessage(msg) {
     statusMessage = msg;
 }
 
-// 🔥 helper: auto delete after 5 mins
 function autoDelete(message, delay = 5 * 60 * 1000) {
     setTimeout(() => {
         message.delete().catch(() => {});
@@ -21,7 +22,6 @@ function startUpdater(channel) {
     if (updaterTimeout) clearTimeout(updaterTimeout);
 
     async function loop() {
-
         if (!statusMessage) {
             updaterTimeout = setTimeout(loop, 60000);
             return;
@@ -36,42 +36,64 @@ function startUpdater(channel) {
                 data.online !== lastData.online ||
                 data.max !== lastData.max
             ) {
-
-                // 🔴 OFFLINE ALERT
                 if (lastData !== null && lastData.online && !data.online) {
-                    console.log("🚨 Server went OFFLINE");
+                    console.log('🚨 Server went OFFLINE');
 
                     if (NOTIFY_ROLE_ID) {
-                        const msg = await channel.send({
-                            content: `<@&${NOTIFY_ROLE_ID}> 🚨 Server is **OFFLINE!**`
-                        });
+                        try {
+                            const message = await channel.send({
+                                content: `<@&${NOTIFY_ROLE_ID}> 🚨 Server is **OFFLINE!**`
+                            });
 
-                        autoDelete(msg);
+                            autoDelete(message);
+                        } catch (error) {
+                            if (isMissingPermissionsError(error)) {
+                                console.log('⚠️ Missing permissions while sending the offline alert.');
+                            } else {
+                                throw error;
+                            }
+                        }
                     }
                 }
 
-                // 🟢 ONLINE ALERT
                 if (lastData !== null && !lastData.online && data.online) {
-                    console.log("🟢 Server back ONLINE");
+                    console.log('🟢 Server back ONLINE');
 
                     if (NOTIFY_ROLE_ID) {
-                        const msg = await channel.send({
-                            content: `<@&${NOTIFY_ROLE_ID}> ✅ Server is back **ONLINE!**`
-                        });
+                        try {
+                            const message = await channel.send({
+                                content: `<@&${NOTIFY_ROLE_ID}> ✅ Server is back **ONLINE!**`
+                            });
 
-                        autoDelete(msg);
+                            autoDelete(message);
+                        } catch (error) {
+                            if (isMissingPermissionsError(error)) {
+                                console.log('⚠️ Missing permissions while sending the online alert.');
+                            } else {
+                                throw error;
+                            }
+                        }
                     }
                 }
 
                 lastData = data;
 
-                await statusMessage.edit({
-                    embeds: [buildEmbed(data)]
-                });
+                try {
+                    await statusMessage.edit({ embeds: [buildEmbed(data)] });
+                } catch (error) {
+                    if (isUnknownMessageError(error)) {
+                        console.log('⚠️ Status panel was deleted. Clearing saved panel state.');
+                        clearPanel();
+                        statusMessage = null;
+                    } else if (isMissingPermissionsError(error)) {
+                        console.log('⚠️ Missing permissions while updating the status panel.');
+                    } else {
+                        throw error;
+                    }
+                }
             }
-
-        } catch (err) {
-            console.log("❌ Update error:", err.message);
+        } catch (error) {
+            console.log('❌ Update error:', error.message);
         }
 
         updaterTimeout = setTimeout(loop, 60000);
