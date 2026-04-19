@@ -44,6 +44,7 @@ When prompted, register using:
     install: {
         title: "📦 Adholokham MC • OmniCraft Installation",
         video: "https://youtu.be/MqOQOWszmdk",
+        downloadUrl: "https://drive.google.com/drive/folders/1atnerao-95hymKFLSTMIwfrtczxRdAsY",
         pages: [
             `If you are using the official Minecraft launcher:
 
@@ -69,7 +70,7 @@ Disable the following:
 • Optimization FPS
 
 Step 4:
-Download the modpack : https://drive.google.com/drive/folders/1atnerao-95hymKFLSTMIwfrtczxRdAsY`,
+Download the modpack using the button below.`,
 
             `Step 5:
 Copy and paste the modpack files into your newly created modpack folder.
