@@ -17,14 +17,20 @@ const data = new SlashCommandBuilder()
 
 async function execute(client, interaction) {
     const now = Date.now();
-    const cooldownUntil = cooldowns.get(interaction.user.id) || 0;
+    const userId = interaction.user.id;
+    const cooldownUntil = cooldowns.get(userId) || 0;
 
     if (cooldownUntil > now) {
         const seconds = Math.ceil((cooldownUntil - now) / 1000);
         return interaction.reply(commandCooldownReply(seconds));
     }
 
-    cooldowns.set(interaction.user.id, now + COOLDOWN_MS);
+    cooldowns.set(userId, now + COOLDOWN_MS);
+    setTimeout(() => {
+        if ((cooldowns.get(userId) || 0) <= Date.now()) {
+            cooldowns.delete(userId);
+        }
+    }, COOLDOWN_MS);
 
     const ip = interaction.options.getString('ip');
     const status = await getStatus(ip);
