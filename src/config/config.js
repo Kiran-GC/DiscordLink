@@ -8,6 +8,8 @@ module.exports = {
 
     MC_HOST: "play.gamerluttan.online",
     MC_PORT: 25588,
+    MC_PRIMARY_IP: "play.gamerluttan.online",
+    MC_SECONDARY_IP: "play.adholokham.online",
 
     SAVE_FILE: "panel.json"
 };
