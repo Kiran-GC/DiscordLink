@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { MC_PRIMARY_IP, MC_SECONDARY_IP } = require('../config/config');
 
 function buildEmbed(data) {
     const playerList = data.list.length
@@ -15,8 +16,8 @@ function buildEmbed(data) {
             { name: "📡 Status", value: `\`\`\`${data.online ? "🟢 Online" : "🔴 Offline"}\`\`\``, inline: true },
             { name: "👥 Players", value: `\`\`\`${data.players} / ${data.max}\`\`\``, inline: true },
             { name: "⚙️ Version", value: `\`\`\`${data.version}\`\`\``, inline: true },
-            { name: "🌐 Primary IP", value: "```play.gamerluttan.online```" },
-            { name: "🌐 Secondary IP", value: "```play.adholokham.online```" },
+            { name: "🌐 Primary IP", value: `\`\`\`${MC_PRIMARY_IP}\`\`\`` },
+            { name: "🌐 Secondary IP", value: `\`\`\`${MC_SECONDARY_IP}\`\`\`` },
             { name: "👥 Players Online", value: `\`\`\`\n${playerList}\n\`\`\`` }
         )
         .setFooter({ text: "Watcher v1 • Live Status" })
