@@ -5,7 +5,8 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    EmbedBuilder
+    EmbedBuilder,
+    MessageFlags
 } = require('discord.js');
 
 const { hasAccess } = require('../../utils/permissions');
@@ -81,7 +82,7 @@ async function startBuilder(interaction) {
     if (!hasAccess(interaction)) {
         return interaction.reply({
             content: "❌ You don’t have permission.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -89,7 +90,7 @@ async function startBuilder(interaction) {
     if (sessions.has(interaction.user.id)) {
         return interaction.reply({
             content: "⚠️ You already have an active embed session. Finish or cancel it first.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -352,7 +353,7 @@ async function handleBuilder(interaction) {
             const index = parseInt(d.getTextInputValue("index")) - 1;
 
             if (isNaN(index) || !data.fields[index]) {
-                return interaction.reply({ content: "❌ Invalid field number.", ephemeral: true });
+                return interaction.reply({ content: "❌ Invalid field number.", flags: MessageFlags.Ephemeral });
             }
 
             data.fields[index] = {
@@ -366,7 +367,7 @@ async function handleBuilder(interaction) {
             const index = parseInt(d.getTextInputValue("index")) - 1;
 
             if (isNaN(index) || !data.fields[index]) {
-                return interaction.reply({ content: "❌ Invalid field number.", ephemeral: true });
+                return interaction.reply({ content: "❌ Invalid field number.", flags: MessageFlags.Ephemeral });
             }
 
             data.fields.splice(index, 1);
@@ -389,7 +390,7 @@ async function handleBuilder(interaction) {
             const channel = interaction.guild.channels.cache.get(id);
 
             if (!channel) {
-                return interaction.reply({ content: "❌ Invalid channel.", ephemeral: true });
+                return interaction.reply({ content: "❌ Invalid channel.", flags: MessageFlags.Ephemeral });
             }
 
             const embed = buildEmbed(data);
@@ -406,7 +407,7 @@ async function handleBuilder(interaction) {
 
             return interaction.reply({
                 content: "✅ Embed sent.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
