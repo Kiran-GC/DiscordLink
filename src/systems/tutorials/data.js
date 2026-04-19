@@ -49,7 +49,7 @@ When prompted, register using:
             `If you are using the official Minecraft launcher:
 
 1. Download the modpack from CurseForge.
-2. Add [Simple Voice Chat](https://www.curseforge.com/minecraft/mc-mods/simple-voice-chat
+2. Add [Simple Voice Chat](https://www.curseforge.com/minecraft/mc-mods/simple-voice-chat)
 3. Add [Odyssey Allies Mod](https://www.curseforge.com/minecraft/mc-mods/odyssey-allies)
 4. Launch the game.
 
