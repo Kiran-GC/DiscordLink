@@ -7,6 +7,7 @@ const {
     MessageFlags
 } = require('discord.js');
 
+const { BRAND_THUMBNAIL } = require('../../config/config');
 const { tutorialSessionExpiredReply } = require('../../utils/interactionReplies');
 const { tutorials } = require('./data');
 
@@ -14,11 +15,8 @@ const sessions = new Map();
 const TUTORIAL_BUTTON_IDS = new Set(['prev', 'next', 'close']);
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
 
-// 🎨 BRAND COLORS
-const PANEL_COLOR = 0x8b5cf6;   // Purple
-const PAGE_COLOR = 0xfacc15;    // Yellow
-
-const BRAND_THUMBNAIL = 'https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png';
+const PANEL_COLOR = 0x8b5cf6;
+const PAGE_COLOR = 0xfacc15;
 
 function clearSession(userId) {
     const session = sessions.get(userId);
@@ -47,7 +45,6 @@ function startSession(userId, key) {
     return sessions.get(userId);
 }
 
-// ===== PANEL =====
 function createPanel() {
     const embed = new EmbedBuilder()
         .setTitle('📚 Adholokham MC • Tutorials')
@@ -84,7 +81,6 @@ function createPanel() {
     };
 }
 
-// ===== PAGE BUILDER =====
 function createPage(tutorialKey, pageIndex) {
     const tutorial = tutorials[tutorialKey];
     const total = tutorial.pages.length;
@@ -137,14 +133,13 @@ function createPage(tutorialKey, pageIndex) {
     };
 }
 
-// ===== PANEL UPSERT =====
 async function upsertPanel(client, channel) {
     const messages = await channel.messages.fetch({ limit: 20 });
 
-    const existing = messages.find(msg =>
-        msg.author.id === client.user.id &&
-        msg.components.length > 0 &&
-        msg.components[0]?.components[0]?.customId === 'tutorial_select'
+    const existing = messages.find(message =>
+        message.author.id === client.user.id &&
+        message.components.length > 0 &&
+        message.components[0]?.components[0]?.customId === 'tutorial_select'
     );
 
     if (existing) {
@@ -157,10 +152,7 @@ async function upsertPanel(client, channel) {
     console.log('✅ Tutorial panel created');
 }
 
-// ===== HANDLER =====
 async function handleTutorials(interaction, client) {
-
-    // ===== DROPDOWN =====
     if (interaction.isStringSelectMenu() && interaction.customId === 'tutorial_select') {
         const key = interaction.values[0];
         startSession(interaction.user.id, key);
@@ -171,7 +163,6 @@ async function handleTutorials(interaction, client) {
         });
     }
 
-    // ===== BUTTONS =====
     if (interaction.isButton() && TUTORIAL_BUTTON_IDS.has(interaction.customId)) {
         const session = sessions.get(interaction.user.id);
         if (!session) {
