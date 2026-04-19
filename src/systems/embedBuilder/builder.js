@@ -110,7 +110,7 @@ async function handleBuilder(interaction) {
 
     const session = await getActiveSession(interaction.client, interaction.user.id);
     if (!session) {
-        if (interaction.isModalSubmit()) {
+        if (interaction.isButton() || interaction.isModalSubmit()) {
             return interaction.reply(embedSessionExpiredReply());
         }
         return;
