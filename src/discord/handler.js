@@ -139,7 +139,7 @@ async function handleInteraction(client, interaction) {
             const apiPing = Math.round(interaction.client.ws.ping);
 
             await interaction.editReply({
-                content: `🏓 Pong! test\nLatency: ${latency}ms\nAPI: ${apiPing}ms`
+                content: `🏓 Pong!\nLatency: ${latency}ms\nAPI: ${apiPing}ms`
             });
         }
 
