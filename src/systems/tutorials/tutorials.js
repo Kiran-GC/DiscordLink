@@ -7,44 +7,74 @@ const {
     MessageFlags
 } = require('discord.js');
 
+const { tutorialSessionExpiredReply } = require('../../utils/interactionReplies');
 const { tutorials } = require('./data');
 
 const sessions = new Map();
+const TUTORIAL_BUTTON_IDS = new Set(['prev', 'next', 'close']);
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
 
 // 🎨 BRAND COLORS
 const PANEL_COLOR = 0x8b5cf6;   // Purple
 const PAGE_COLOR = 0xfacc15;    // Yellow
 
-const BRAND_THUMBNAIL = "https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png";
+const BRAND_THUMBNAIL = 'https://cdn.discordapp.com/attachments/786154341638864917/1492544844554305698/PNG.png';
+
+function clearSession(userId) {
+    const session = sessions.get(userId);
+    if (session?.timeout) clearTimeout(session.timeout);
+    sessions.delete(userId);
+}
+
+function refreshSessionTimeout(userId) {
+    const session = sessions.get(userId);
+    if (!session) return;
+
+    if (session.timeout) clearTimeout(session.timeout);
+    session.timeout = setTimeout(() => clearSession(userId), SESSION_TIMEOUT_MS);
+}
+
+function startSession(userId, key) {
+    clearSession(userId);
+
+    sessions.set(userId, {
+        key,
+        page: 0,
+        timeout: null
+    });
+
+    refreshSessionTimeout(userId);
+    return sessions.get(userId);
+}
 
 // ===== PANEL =====
 function createPanel() {
     const embed = new EmbedBuilder()
-        .setTitle("📚 Adholokham MC • Tutorials")
+        .setTitle('📚 Adholokham MC • Tutorials')
         .setDescription(
-            "Welcome to **Adholokham MC (OmniCraft)**.\n\n" +
-            "Use the dropdown below to access detailed guides.\n" +
-            "Follow the steps carefully to get started."
+            'Welcome to **Adholokham MC (OmniCraft)**.\n\n' +
+            'Use the dropdown below to access detailed guides.\n' +
+            'Follow the steps carefully to get started.'
         )
         .setColor(PANEL_COLOR)
         .setThumbnail(BRAND_THUMBNAIL)
-        .setFooter({ text: "Tutorial Hub • Navigation Panel" });
+        .setFooter({ text: 'Tutorial Hub • Navigation Panel' });
 
     const menu = new StringSelectMenuBuilder()
-        .setCustomId("tutorial_select")
-        .setPlaceholder("Select a tutorial...")
+        .setCustomId('tutorial_select')
+        .setPlaceholder('Select a tutorial...')
         .addOptions([
             {
-                label: "Verify Yourself",
-                value: "verify",
-                emoji: "🔐",
-                description: "Access the server and verify your account"
+                label: 'Verify Yourself',
+                value: 'verify',
+                emoji: '🔐',
+                description: 'Access the server and verify your account'
             },
             {
-                label: "Install OmniCraft",
-                value: "install",
-                emoji: "📦",
-                description: "Install and setup the modpack"
+                label: 'Install OmniCraft',
+                value: 'install',
+                emoji: '📦',
+                description: 'Install and setup the modpack'
             }
         ]);
 
@@ -68,17 +98,17 @@ function createPage(tutorialKey, pageIndex) {
 
     const controls = [
         new ButtonBuilder()
-            .setCustomId("prev")
-            .setLabel("⬅️")
+            .setCustomId('prev')
+            .setLabel('⬅️')
             .setStyle(ButtonStyle.Secondary),
 
         new ButtonBuilder()
-            .setCustomId("next")
-            .setLabel("➡️")
+            .setCustomId('next')
+            .setLabel('➡️')
             .setStyle(ButtonStyle.Secondary),
 
         new ButtonBuilder()
-            .setLabel("🎥 Watch Video")
+            .setLabel('🎥 Watch Video')
             .setStyle(ButtonStyle.Link)
             .setURL(tutorial.video)
     ];
@@ -86,7 +116,7 @@ function createPage(tutorialKey, pageIndex) {
     if (tutorial.downloadUrl) {
         controls.push(
             new ButtonBuilder()
-                .setLabel("📥 Download Modpack")
+                .setLabel('📥 Download Modpack')
                 .setStyle(ButtonStyle.Link)
                 .setURL(tutorial.downloadUrl)
         );
@@ -94,8 +124,8 @@ function createPage(tutorialKey, pageIndex) {
 
     controls.push(
         new ButtonBuilder()
-            .setCustomId("close")
-            .setLabel("❌")
+            .setCustomId('close')
+            .setLabel('❌')
             .setStyle(ButtonStyle.Danger)
     );
 
@@ -114,30 +144,26 @@ async function upsertPanel(client, channel) {
     const existing = messages.find(msg =>
         msg.author.id === client.user.id &&
         msg.components.length > 0 &&
-        msg.components[0]?.components[0]?.customId === "tutorial_select"
+        msg.components[0]?.components[0]?.customId === 'tutorial_select'
     );
 
     if (existing) {
         await existing.edit(createPanel());
-        console.log("♻️ Tutorial panel updated");
+        console.log('♻️ Tutorial panel updated');
         return;
     }
 
     await channel.send(createPanel());
-    console.log("✅ Tutorial panel created");
+    console.log('✅ Tutorial panel created');
 }
 
 // ===== HANDLER =====
 async function handleTutorials(interaction, client) {
 
     // ===== DROPDOWN =====
-    if (interaction.isStringSelectMenu() && interaction.customId === "tutorial_select") {
+    if (interaction.isStringSelectMenu() && interaction.customId === 'tutorial_select') {
         const key = interaction.values[0];
-
-        sessions.set(interaction.user.id, {
-            key,
-            page: 0
-        });
+        startSession(interaction.user.id, key);
 
         return interaction.reply({
             ...createPage(key, 0),
@@ -146,24 +172,27 @@ async function handleTutorials(interaction, client) {
     }
 
     // ===== BUTTONS =====
-    if (interaction.isButton()) {
+    if (interaction.isButton() && TUTORIAL_BUTTON_IDS.has(interaction.customId)) {
         const session = sessions.get(interaction.user.id);
-        if (!session) return;
+        if (!session) {
+            return interaction.reply(tutorialSessionExpiredReply());
+        }
 
-        if (interaction.customId === "close") {
-            sessions.delete(interaction.user.id);
+        refreshSessionTimeout(interaction.user.id);
+
+        if (interaction.customId === 'close') {
+            clearSession(interaction.user.id);
             return interaction.update({
-                content: "Closed.",
+                content: 'Closed.',
                 embeds: [],
                 components: []
             });
         }
 
-        if (interaction.customId === "next") session.page++;
-        if (interaction.customId === "prev") session.page--;
+        if (interaction.customId === 'next') session.page++;
+        if (interaction.customId === 'prev') session.page--;
 
         const tutorial = tutorials[session.key];
-
         session.page = Math.max(0, Math.min(session.page, tutorial.pages.length - 1));
 
         return interaction.update(createPage(session.key, session.page));
