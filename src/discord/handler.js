@@ -5,11 +5,22 @@ const {
     ephemeralReply
 } = require('../utils/interactionReplies');
 const { isMissingPermissionsError } = require('../utils/discordErrors');
+const { VERIFY_CHANNEL_ID } = require('../config/config');
 
 async function handleInteraction(client, interaction) {
     try {
         if (!interaction.isChatInputCommand()) {
             return;
+        }
+
+        // 🔒 VERIFY CHANNEL COMMAND LOCK
+        if (
+            interaction.channelId === VERIFY_CHANNEL_ID &&
+            interaction.commandName !== 'verify'
+        ) {
+            return interaction.reply(
+                ephemeralReply('❌ Only `/verify` is allowed in this channel.')
+            );
         }
 
         const handler = commandMap.get(interaction.commandName);
@@ -18,6 +29,7 @@ async function handleInteraction(client, interaction) {
         }
 
         return handler(client, interaction);
+
     } catch (error) {
         console.log(
             `❌ Command error [/${interaction.commandName}] user=${interaction.user?.id ?? 'unknown'} guild=${interaction.guildId ?? 'dm'}:`,
@@ -29,7 +41,9 @@ async function handleInteraction(client, interaction) {
         }
 
         if (!interaction.replied && !interaction.deferred) {
-            return interaction.reply(ephemeralReply('❌ Something went wrong while running that command.'));
+            return interaction.reply(
+                ephemeralReply('❌ Something went wrong while running that command.')
+            );
         }
     }
 }
