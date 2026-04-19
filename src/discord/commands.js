@@ -1,34 +1,24 @@
-const { SlashCommandBuilder } = require('discord.js');
+const serverstat = require('./commandModules/serverstat');
+const mcsrv = require('./commandModules/mcsrv');
+const ip = require('./commandModules/ip');
+const serverinfo = require('./commandModules/serverinfo');
+const tutorials = require('./commandModules/tutorials');
+const embed = require('./commandModules/embed');
+const ping = require('./commandModules/ping');
 
-const commands = [
-    new SlashCommandBuilder()
-        .setName('serverstat')
-        .setDescription('Create or update MC status panel'),
-
-    new SlashCommandBuilder()
-        .setName('mcsrv')
-        .setDescription('Check any Minecraft server')
-        .addStringOption(opt =>
-            opt.setName('ip')
-                .setDescription('Server IP')
-                .setRequired(true)
-        ),
-
-    new SlashCommandBuilder()
-        .setName('tutorials')
-        .setDescription('Create or update tutorial panel'),
-
-    new SlashCommandBuilder()
-        .setName('embed')
-        .setDescription('Open embed builder'),
-
-    new SlashCommandBuilder()
-        .setName('ping')
-        .setDescription('Check bot latency'),
-
-    new SlashCommandBuilder()
-        .setName('ip')
-        .setDescription('Show both Adholokham MC server IPs')
+const commandModules = [
+    serverstat,
+    mcsrv,
+    ip,
+    serverinfo,
+    tutorials,
+    embed,
+    ping
 ];
 
-module.exports = { commands };
+const commands = commandModules.map(command => command.data);
+const commandMap = new Map(
+    commandModules.map(command => [command.data.toJSON().name, command.execute])
+);
+
+module.exports = { commands, commandMap };
