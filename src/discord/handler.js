@@ -1,6 +1,7 @@
 const { getStatus } = require('../mc/status');
 const { buildEmbed } = require('../embeds/mainEmbed');
 const { buildSimpleEmbed } = require('../embeds/simpleEmbed');
+const { buildIpEmbed } = require('../embeds/ipEmbed');
 const { savePanel, loadPanel } = require('../utils/storage');
 const { hasAccess } = require('../utils/permissions');
 const { startUpdater, setMessage } = require('../systems/updater');
@@ -23,8 +24,6 @@ async function handleInteraction(client, interaction) {
         // ===============================
         if (interaction.isChatInputCommand()) {
 
-            const channel = await client.channels.fetch(CHANNEL_ID);
-
             // ===== SERVER PANEL =====
             if (interaction.commandName === 'serverstat') {
 
@@ -35,6 +34,7 @@ async function handleInteraction(client, interaction) {
                     });
                 }
 
+                const channel = await client.channels.fetch(CHANNEL_ID);
                 const data = await getStatus(`${MC_HOST}:${MC_PORT}`);
 
                 let msg;
@@ -78,6 +78,11 @@ async function handleInteraction(client, interaction) {
                 return interaction.reply({ embeds: [embed], files });
             }
 
+            // ===== IP COMMAND =====
+            if (interaction.commandName === 'ip') {
+                return interaction.reply({ embeds: [buildIpEmbed()] });
+            }
+
             // ===== TUTORIAL PANEL =====
             if (interaction.commandName === 'tutorials') {
 
@@ -109,6 +114,24 @@ async function handleInteraction(client, interaction) {
 
                 return startBuilder(interaction);
             }
+
+            // ===== PING COMMAND =====
+            if (interaction.commandName === 'ping') {
+
+                const sent = Date.now();
+
+                await interaction.reply({
+                    content: "🏓 Pinging...",
+                    ephemeral: true
+                });
+
+                const latency = Date.now() - sent;
+                const apiPing = Math.round(interaction.client.ws.ping);
+
+                return interaction.editReply({
+                    content: `🏓 Pong!\nLatency: ${latency}ms\nAPI: ${apiPing}ms`
+                });
+            }
         }
 
         // ===============================
@@ -120,27 +143,6 @@ async function handleInteraction(client, interaction) {
             interaction.isChannelSelectMenu()
         ) {
             return handleBuilder(interaction);
-        }
-
-        // ===============================
-        // 🔹 PING COMMAND
-        // ===============================
-        
-        if (interaction.commandName === 'ping') {
-
-            const sent = Date.now();
-
-            await interaction.reply({
-                content: "🏓 Pinging...",
-                ephemeral: true
-            });
-
-            const latency = Date.now() - sent;
-            const apiPing = Math.round(interaction.client.ws.ping);
-
-            await interaction.editReply({
-                content: `🏓 Pong!\nLatency: ${latency}ms\nAPI: ${apiPing}ms`
-            });
         }
 
     } catch (err) {
