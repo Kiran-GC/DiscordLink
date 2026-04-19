@@ -47,6 +47,30 @@ function buildEmbed(data) {
     return embed;
 }
 
+function clearSession(userId) {
+    const session = sessions.get(userId);
+    if (session?.timeout) clearTimeout(session.timeout);
+    sessions.delete(userId);
+}
+
+async function fetchSessionMessage(client, session) {
+    const channel = await client.channels.fetch(session.channelId);
+    return channel.messages.fetch(session.messageId);
+}
+
+async function getActiveSession(interaction) {
+    const session = sessions.get(interaction.user.id);
+    if (!session) return null;
+
+    try {
+        await fetchSessionMessage(interaction.client, session);
+        return session;
+    } catch {
+        clearSession(interaction.user.id);
+        return null;
+    }
+}
+
 // ===== UI =====
 function createUI(data) {
     const embed = buildEmbed(data);
@@ -87,7 +111,8 @@ async function startBuilder(interaction) {
     }
 
     // 🚫 Session limit (1 per user)
-    if (sessions.has(interaction.user.id)) {
+    const existingSession = await getActiveSession(interaction);
+    if (existingSession) {
         return interaction.reply({
             content: "⚠️ You already have an active embed session. Finish or cancel it first.",
             flags: MessageFlags.Ephemeral
@@ -129,9 +154,7 @@ async function startBuilder(interaction) {
             const session = sessions.get(interaction.user.id);
             if (!session) return;
 
-            const channel = await interaction.client.channels.fetch(session.channelId);
-            const message = await channel.messages.fetch(session.messageId);
-
+            const message = await fetchSessionMessage(interaction.client, session);
             await message.edit({
                 content: "⌛ Session expired.",
                 embeds: [],
@@ -139,8 +162,7 @@ async function startBuilder(interaction) {
             });
         } catch {}
 
-        sessions.delete(interaction.user.id);
-
+        clearSession(interaction.user.id);
     }, 10 * 60 * 1000);
 
     // store timeout reference
@@ -149,8 +171,7 @@ async function startBuilder(interaction) {
 
 // ===== UPDATE =====
 async function updateMessage(interaction, session) {
-    const channel = await interaction.client.channels.fetch(session.channelId);
-    const msg = await channel.messages.fetch(session.messageId);
+    const msg = await fetchSessionMessage(interaction.client, session);
     await msg.edit(createUI(session.data));
 }
 
@@ -160,8 +181,16 @@ async function handleBuilder(interaction) {
     // 🔐 Lock all interactions
     if (!hasAccess(interaction)) return;
 
-    const session = sessions.get(interaction.user.id);
-    if (!session) return;
+    const session = await getActiveSession(interaction);
+    if (!session) {
+        if (interaction.isModalSubmit()) {
+            return interaction.reply({
+                content: "⚠️ Your embed session was deleted or expired. Start a new one with /embed.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+        return;
+    }
 
     const data = session.data;
 
@@ -169,11 +198,7 @@ async function handleBuilder(interaction) {
     if (interaction.isButton()) {
 
         if (interaction.customId === "eb_cancel") {
-            const session = sessions.get(interaction.user.id);
-
-            if (session?.timeout) clearTimeout(session.timeout);
-
-            sessions.delete(interaction.user.id);
+            clearSession(interaction.user.id);
 
             return interaction.update({
                 content: "Cancelled.",
@@ -397,13 +422,11 @@ async function handleBuilder(interaction) {
             await channel.send({ embeds: [embed] });
 
             try {
-                const builderChannel = await interaction.client.channels.fetch(session.channelId);
-                const builderMsg = await builderChannel.messages.fetch(session.messageId);
+                const builderMsg = await fetchSessionMessage(interaction.client, session);
                 await builderMsg.delete();
             } catch {}
-            const session = sessions.get(interaction.user.id);
-            if (session?.timeout) clearTimeout(session.timeout);
-            sessions.delete(interaction.user.id);
+
+            clearSession(interaction.user.id);
 
             return interaction.reply({
                 content: "✅ Embed sent.",
@@ -411,8 +434,16 @@ async function handleBuilder(interaction) {
             });
         }
 
-        await interaction.deferUpdate();
-        await updateMessage(interaction, session);
+        try {
+            await interaction.deferUpdate();
+            await updateMessage(interaction, session);
+        } catch {
+            clearSession(interaction.user.id);
+            return interaction.followUp({
+                content: "⚠️ Your embed session was deleted or expired. Start a new one with /embed.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
     }
 }
 
