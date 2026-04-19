@@ -5,7 +5,8 @@ const REQUIRED_KEYS = [
     'CLIENT_ID',
     'GUILD_ID',
     'CHANNEL_ID',
-    'ALLOWED_ROLE_ID'
+    'ALLOWED_ROLE_ID',
+    'VERIFY_CHANNEL_ID'
 ];
 
 function validateConfig() {

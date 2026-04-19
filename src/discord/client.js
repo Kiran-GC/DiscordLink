@@ -12,6 +12,7 @@ const { dynamicPresence } = require('../systems/presence');
 const { loadPanel, savePanel, clearPanel } = require('../utils/storage');
 const { isMissingPermissionsError, isUnknownMessageError } = require('../utils/discordErrors');
 const { setMessage, startUpdater } = require('../systems/updater');
+const { initVerifyGuard } = require('../systems/verifyGuard');
 
 // Tutorials
 const { handleTutorials, upsertPanel } = require('../systems/tutorials/tutorials');
@@ -30,6 +31,7 @@ const client = new Client({
 
 client.once('clientReady', async () => {
     console.log(`Logged in as ${client.user.tag}`);
+    initVerifyGuard(client);
 
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
     await rest.put(

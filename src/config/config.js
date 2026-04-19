@@ -5,6 +5,7 @@ module.exports = {
     CHANNEL_ID: process.env.CHANNEL_ID,
     ALLOWED_ROLE_ID: process.env.ALLOWED_ROLE_ID,
     NOTIFY_ROLE_ID: process.env.NOTIFY_ROLE_ID,
+    VERIFY_CHANNEL_ID: process.env.VERIFY_CHANNEL_ID,
 
     SERVER_NAME: 'Adholokham MC (OmniCraft)',
     SERVER_DESCRIPTION: 'Forge-powered OmniCraft experience • Survival • Community-driven gameplay',
