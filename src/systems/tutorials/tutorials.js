@@ -3,7 +3,8 @@ const {
     ButtonBuilder,
     ButtonStyle,
     StringSelectMenuBuilder,
-    EmbedBuilder
+    EmbedBuilder,
+    MessageFlags
 } = require('discord.js');
 
 const { tutorials } = require('./data');
@@ -140,7 +141,7 @@ async function handleTutorials(interaction, client) {
 
         return interaction.reply({
             ...createPage(key, 0),
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
