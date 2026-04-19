@@ -1,3 +1,16 @@
+function isValidHexColor(value) {
+    return /^#?[0-9a-fA-F]{6}$/.test(value);
+}
+
+function isValidHttpUrl(value) {
+    try {
+        const url = new URL(value);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 function applyModalSubmission(data, interaction) {
     const fields = interaction.fields;
 
@@ -8,8 +21,16 @@ function applyModalSubmission(data, interaction) {
     }
 
     if (interaction.customId === 'modal_style') {
-        const color = fields.getTextInputValue('color');
-        if (color) data.color = parseInt(color.replace('#', ''), 16);
+        const color = fields.getTextInputValue('color').trim();
+
+        if (color) {
+            if (!isValidHexColor(color)) {
+                return { error: 'invalidHexColor' };
+            }
+
+            data.color = parseInt(color.replace('#', ''), 16);
+        }
+
         data.footer = fields.getTextInputValue('footer');
         return { error: null };
     }
@@ -56,15 +77,31 @@ function applyModalSubmission(data, interaction) {
     }
 
     if (interaction.customId === 'modal_media') {
-        data.thumbnail = fields.getTextInputValue('thumbnail');
-        data.image = fields.getTextInputValue('image');
+        const thumbnail = fields.getTextInputValue('thumbnail').trim();
+        const image = fields.getTextInputValue('image').trim();
+
+        if (thumbnail && !isValidHttpUrl(thumbnail)) {
+            return { error: 'invalidUrl' };
+        }
+
+        if (image && !isValidHttpUrl(image)) {
+            return { error: 'invalidUrl' };
+        }
+
+        data.thumbnail = thumbnail;
+        data.image = image;
         return { error: null };
     }
 
     if (interaction.customId === 'modal_extras') {
         data.author = fields.getTextInputValue('author');
-        const icon = fields.getTextInputValue('icon');
-        data.authorIcon = icon && icon.startsWith('http') ? icon : null;
+        const icon = fields.getTextInputValue('icon').trim();
+
+        if (icon && !isValidHttpUrl(icon)) {
+            return { error: 'invalidUrl' };
+        }
+
+        data.authorIcon = icon || null;
         return { error: null };
     }
 
