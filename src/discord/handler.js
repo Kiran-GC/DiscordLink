@@ -1,10 +1,16 @@
-const { AttachmentBuilder, MessageFlags } = require('discord.js');
+const { AttachmentBuilder } = require('discord.js');
 const { getStatus } = require('../mc/status');
 const { buildEmbed } = require('../embeds/mainEmbed');
 const { buildSimpleEmbed } = require('../embeds/simpleEmbed');
 const { buildIpEmbed } = require('../embeds/ipEmbed');
 const { savePanel, loadPanel } = require('../utils/storage');
 const { hasAccess } = require('../utils/permissions');
+const {
+    noPermissionReply,
+    panelUpdatedReply,
+    tutorialPanelUpdatedReply,
+    ephemeralReply
+} = require('../utils/interactionReplies');
 const { startUpdater, setMessage } = require('../systems/updater');
 const { CHANNEL_ID, MC_HOST, MC_PORT } = require('../config/config');
 const { startBuilder } = require('../systems/embedBuilder/builder');
@@ -12,10 +18,7 @@ const { upsertPanel } = require('../systems/tutorials/tutorials');
 const { TUTORIAL_CHANNEL_ID } = require('../systems/tutorials/config');
 
 function replyNoPermission(interaction) {
-    return interaction.reply({
-        content: '❌ You don’t have permission.',
-        flags: MessageFlags.Ephemeral
-    });
+    return interaction.reply(noPermissionReply());
 }
 
 async function handleServerStat(client, interaction) {
@@ -45,10 +48,7 @@ async function handleServerStat(client, interaction) {
     setMessage(msg);
     startUpdater(channel);
 
-    return interaction.reply({
-        content: '✅ Panel updated!',
-        flags: MessageFlags.Ephemeral
-    });
+    return interaction.reply(panelUpdatedReply());
 }
 
 async function handleMcSrv(interaction) {
@@ -80,10 +80,7 @@ async function handleTutorialsCommand(client, interaction) {
     const tutorialChannel = await client.channels.fetch(TUTORIAL_CHANNEL_ID);
     await upsertPanel(client, tutorialChannel);
 
-    return interaction.reply({
-        content: '✅ Tutorial panel updated.',
-        flags: MessageFlags.Ephemeral
-    });
+    return interaction.reply(tutorialPanelUpdatedReply());
 }
 
 function handleEmbedCommand(interaction) {
@@ -97,10 +94,7 @@ function handleEmbedCommand(interaction) {
 async function handlePing(interaction) {
     const sent = Date.now();
 
-    await interaction.reply({
-        content: '🏓 Pinging...',
-        flags: MessageFlags.Ephemeral
-    });
+    await interaction.reply(ephemeralReply('🏓 Pinging...'));
 
     const latency = Date.now() - sent;
     const apiPing = Math.round(interaction.client.ws.ping);
