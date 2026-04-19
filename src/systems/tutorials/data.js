@@ -69,7 +69,7 @@ Disable the following:
 • Optimization FPS
 
 Step 4:
-Download the modpack (link will be added later).`,
+Download the modpack : https://drive.google.com/drive/folders/1atnerao-95hymKFLSTMIwfrtczxRdAsY`,
 
             `Step 5:
 Copy and paste the modpack files into your newly created modpack folder.
