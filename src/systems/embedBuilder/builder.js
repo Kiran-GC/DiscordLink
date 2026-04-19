@@ -4,9 +4,13 @@ const {
     activeEmbedSessionReply,
     invalidFieldNumberReply,
     invalidChannelReply,
+    invalidHexColorReply,
+    invalidUrlReply,
+    botMissingPermissionsReply,
     embedSentReply,
     embedSessionExpiredReply
 } = require('../../utils/interactionReplies');
+const { isMissingPermissionsError } = require('../../utils/discordErrors');
 const { buildEmbed, createUI } = require('./ui');
 const { createModal } = require('./modals');
 const { applyModalSubmission } = require('./state');
@@ -94,7 +98,14 @@ async function handleSubmitModal(interaction, session, data) {
         return interaction.reply(invalidChannelReply());
     }
 
-    await channel.send({ embeds: [buildEmbed(data)] });
+    try {
+        await channel.send({ embeds: [buildEmbed(data)] });
+    } catch (error) {
+        if (isMissingPermissionsError(error)) {
+            return interaction.reply(botMissingPermissionsReply());
+        }
+        throw error;
+    }
 
     try {
         const builderMessage = await fetchSessionMessage(interaction.client, session);
@@ -143,6 +154,12 @@ async function handleBuilder(interaction) {
         const result = applyModalSubmission(data, interaction);
         if (result.error === 'invalidFieldNumber') {
             return interaction.reply(invalidFieldNumberReply());
+        }
+        if (result.error === 'invalidHexColor') {
+            return interaction.reply(invalidHexColorReply());
+        }
+        if (result.error === 'invalidUrl') {
+            return interaction.reply(invalidUrlReply());
         }
 
         try {
