@@ -22,10 +22,13 @@ const commands = [
         .setName('embed')
         .setDescription('Open embed builder'),
 
-    // 🆕 ADD THIS
     new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('Check bot latency')
+        .setDescription('Check bot latency'),
+
+    new SlashCommandBuilder()
+        .setName('ip')
+        .setDescription('Show both Adholokham MC server IPs')
 ];
 
 module.exports = { commands };
