@@ -65,7 +65,7 @@ function createPage(tutorialKey, pageIndex) {
         .setThumbnail(BRAND_THUMBNAIL)
         .setFooter({ text: `Page ${pageIndex + 1} / ${total} • Adholokham MC` });
 
-    const buttons = new ActionRowBuilder().addComponents(
+    const controls = [
         new ButtonBuilder()
             .setCustomId("prev")
             .setLabel("⬅️")
@@ -79,13 +79,26 @@ function createPage(tutorialKey, pageIndex) {
         new ButtonBuilder()
             .setLabel("🎥 Watch Video")
             .setStyle(ButtonStyle.Link)
-            .setURL(tutorial.video),
+            .setURL(tutorial.video)
+    ];
 
+    if (tutorial.downloadUrl) {
+        controls.push(
+            new ButtonBuilder()
+                .setLabel("📥 Download Modpack")
+                .setStyle(ButtonStyle.Link)
+                .setURL(tutorial.downloadUrl)
+        );
+    }
+
+    controls.push(
         new ButtonBuilder()
             .setCustomId("close")
             .setLabel("❌")
             .setStyle(ButtonStyle.Danger)
     );
+
+    const buttons = new ActionRowBuilder().addComponents(controls);
 
     return {
         embeds: [embed],
