@@ -18,7 +18,7 @@ class PteroClient {
     // 🔍 DEBUG (remove later)
     console.log("Ptero Response:", JSON.stringify(res.data, null, 2));
 
-    return res.data?.attributes?.current_state;
+    return res.data?.attributes?.state;
   }
 
   async power(serverId, signal) {

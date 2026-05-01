@@ -11,6 +11,8 @@ const serverManager = require("./serverManager");
 const panels = new Map();
 const intervals = new Map();
 
+/* ---------------- UTIL ---------------- */
+
 function statusText(state) {
   switch (state) {
     case "running":
@@ -25,15 +27,48 @@ function statusText(state) {
   }
 }
 
-function buildEmbed(server, state) {
+// Convert ms → "Xd Ym"
+function formatUptime(ms) {
+  if (!ms) return "0m";
+
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const minutes = totalMinutes % (60 * 24);
+
+  if (days > 0) return `${days}d ${minutes}m`;
+  return `${minutes}m`;
+}
+
+/* ---------------- EMBED ---------------- */
+
+function buildEmbed(server, data) {
+  const state = data.state;
+  const uptime = formatUptime(data.uptime);
+
   return new EmbedBuilder()
-    .setTitle("🖥 Server Control Panel")
+    .setTitle("📡 Server Status")
     .addFields(
-      { name: "Server", value: server.name, inline: true },
-      { name: "Status", value: statusText(state), inline: true }
+      {
+        name: "🛰 Status",
+        value: `\`${statusText(state)}\``,
+        inline: true
+      },
+      {
+        name: "⏱ Uptime",
+        value: `\`${uptime}\``,
+        inline: true
+      },
+      {
+        name: "🖥 Server",
+        value: `\`${server.name}\``,
+        inline: false
+      }
     )
+    .setFooter({ text: "Watcher v1 • Live Status" })
     .setTimestamp();
 }
+
+/* ---------------- BUTTONS ---------------- */
 
 function buildButtons(key) {
   return new ActionRowBuilder().addComponents(
@@ -54,6 +89,19 @@ function buildButtons(key) {
   );
 }
 
+/* ---------------- CORE ---------------- */
+
+async function fetchData(serverId) {
+  const res = await ptero.client.get(`/servers/${serverId}/resources`);
+
+  const attr = res.data?.attributes || {};
+
+  return {
+    state: attr.state,
+    uptime: attr.resources?.uptime
+  };
+}
+
 async function updatePanel(client, channelId) {
   const panel = panels.get(channelId);
   if (!panel) return;
@@ -64,15 +112,14 @@ async function updatePanel(client, channelId) {
   const channel = await client.channels.fetch(channelId);
   const msg = await channel.messages.fetch(panel.messageId);
 
-  const state = await ptero.getState(server.id);
-
-  // 🔍 DEBUG
-  console.log("STATE RECEIVED:", state);
+  const data = await fetchData(server.id);
 
   await msg.edit({
-    embeds: [buildEmbed(server, state)]
+    embeds: [buildEmbed(server, data)]
   });
 }
+
+/* ---------------- POLLING (30s) ---------------- */
 
 function startPolling(client, channelId) {
   if (intervals.has(channelId)) return;
@@ -83,14 +130,16 @@ function startPolling(client, channelId) {
     } catch (err) {
       console.error("Panel update failed:", err.message);
 
-      // 🛑 stop spam if something breaks
+      // stop spam loop
       clearInterval(intervals.get(channelId));
       intervals.delete(channelId);
     }
-  }, 10000);
+  }, 30000); // ✅ 30 seconds
 
   intervals.set(channelId, int);
 }
+
+/* ---------------- CREATE PANEL ---------------- */
 
 async function createPanel(interaction, key) {
   const server = serverManager.getServer(key);
@@ -98,10 +147,10 @@ async function createPanel(interaction, key) {
     return interaction.reply({ content: "❌ Server not found", ephemeral: true });
   }
 
-  const state = await ptero.getState(server.id);
+  const data = await fetchData(server.id);
 
   const msg = await interaction.channel.send({
-    embeds: [buildEmbed(server, state)],
+    embeds: [buildEmbed(server, data)],
     components: [buildButtons(key)]
   });
 
