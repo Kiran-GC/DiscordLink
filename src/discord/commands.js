@@ -5,6 +5,8 @@ const serverinfo = require('./commandModules/serverinfo');
 const tutorials = require('./commandModules/tutorials');
 const embed = require('./commandModules/embed');
 const ping = require('./commandModules/ping');
+const addserver = require('./commandModules/addserver');
+const panelstat = require('./commandModules/panelstat');
 
 const commandModules = [
     serverstat,
@@ -13,7 +15,9 @@ const commandModules = [
     serverinfo,
     tutorials,
     embed,
-    ping
+    ping,
+    addserver,
+    panelstat
 ];
 
 const commands = commandModules.map(command => command.data);
