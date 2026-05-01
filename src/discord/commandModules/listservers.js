@@ -7,7 +7,7 @@ const data = new SlashCommandBuilder()
   .setDescription('Create or update admin panel');
 
 async function execute(client, interaction) {
-  await interaction.deferReply({ ephemeral: true }); // ✅ ALWAYS FIRST
+  await interaction.deferReply({ ephemeral: true });
 
   try {
     if (!(await hasAccess(interaction))) {
