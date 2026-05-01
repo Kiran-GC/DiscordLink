@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const serverManager = require('../../services/serverManager');
 const { hasAccess } = require('../../utils/permissions');
+const { upsertAdminPanel } = require('../../systems/adminPanel/adminPanelManager');
 
 const data = new SlashCommandBuilder()
   .setName('removeserver')
@@ -10,7 +11,7 @@ const data = new SlashCommandBuilder()
   );
 
 async function execute(client, interaction) {
-  await interaction.deferReply({ ephemeral: true }); // ✅ FIRST
+  await interaction.deferReply({ ephemeral: true });
 
   try {
     if (!(await hasAccess(interaction))) {
@@ -24,6 +25,9 @@ async function execute(client, interaction) {
     if (!removed) {
       return interaction.editReply('❌ Server not found');
     }
+
+    // ✅ AUTO UPDATE PANEL
+    await upsertAdminPanel(client);
 
     return interaction.editReply(`🗑️ Removed \`${key}\``);
 

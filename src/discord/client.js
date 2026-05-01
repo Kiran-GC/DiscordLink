@@ -14,6 +14,7 @@ const { isMissingPermissionsError, isUnknownMessageError } = require('../utils/d
 const { setMessage, startUpdater } = require('../systems/updater');
 const { initVerifyGuard } = require('../systems/verifyGuard');
 const handlePanel = require('../systems/panel/panelHandler');
+const handleAdminPanel = require('../systems/adminPanel/adminPanelHandler');
 
 // Tutorials
 const { handleTutorials, upsertPanel } = require('../systems/tutorials/tutorials');
@@ -127,6 +128,9 @@ client.on('interactionCreate', async interaction => {
         if (interaction.isStringSelectMenu() || interaction.isButton()) {
             const handled = await handleTutorials(interaction, client);
             if (handled) return;
+
+            const adminHandled = await handleAdminPanel(interaction, client);
+            if (adminHandled) return;
 
             const panelHandled = await handlePanel(interaction, client);
             if (panelHandled) return;

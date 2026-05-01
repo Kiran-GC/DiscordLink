@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const serverManager = require('../../services/serverManager');
 const { hasAccess } = require('../../utils/permissions');
+const { upsertAdminPanel } = require('../../systems/adminPanel/adminPanelManager');
 
 const data = new SlashCommandBuilder()
   .setName('addserver')
@@ -13,7 +14,7 @@ const data = new SlashCommandBuilder()
     option.setName('uuid').setDescription('Server UUID').setRequired(true));
 
 async function execute(client, interaction) {
-  await interaction.deferReply({ ephemeral: true }); // ✅ FIRST
+  await interaction.deferReply({ ephemeral: true });
 
   try {
     if (!(await hasAccess(interaction))) {
@@ -25,6 +26,9 @@ async function execute(client, interaction) {
     const uuid = interaction.options.getString('uuid');
 
     await serverManager.addServer(key, name, uuid);
+
+    // ✅ AUTO UPDATE PANEL
+    await upsertAdminPanel(client);
 
     return interaction.editReply('✅ Server added');
 
