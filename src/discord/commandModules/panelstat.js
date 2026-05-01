@@ -3,6 +3,7 @@ const panelManager = require('../../services/panelManager');
 const serverManager = require('../../services/serverManager');
 const { hasAccess } = require('../../utils/permissions');
 const { noPermissionReply, ephemeralReply } = require('../../utils/interactionReplies');
+const { safeReply } = require('../../utils/safeReply');
 
 const data = new SlashCommandBuilder()
     .setName('panelstat')
@@ -15,14 +16,14 @@ const data = new SlashCommandBuilder()
     );
 
 async function execute(client, interaction) {
-    if (!hasAccess(interaction)) {
-        return interaction.reply(noPermissionReply());
+    if (!(await hasAccess(interaction))) {
+        return safeReply(interaction, noPermissionReply());
     }
 
     const key = interaction.options.getString('servername').toLowerCase();
 
     if (!serverManager.getServer(key)) {
-        return interaction.reply(ephemeralReply('❌ Server not found'));
+        return safeReply(interaction, ephemeralReply('❌ Server not found'));
     }
 
     return panelManager.createPanel(interaction, key);

@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const serverManager = require('../../services/serverManager');
 const { hasAccess } = require('../../utils/permissions');
 const { noPermissionReply, ephemeralReply } = require('../../utils/interactionReplies');
+const { safeReply } = require('../../utils/safeReply');
 
 const data = new SlashCommandBuilder()
     .setName('addserver')
@@ -17,8 +18,8 @@ const data = new SlashCommandBuilder()
     );
 
 async function execute(client, interaction) {
-    if (!hasAccess(interaction)) {
-        return interaction.reply(noPermissionReply());
+    if (!(await hasAccess(interaction))) {
+        return safeReply(interaction, noPermissionReply());
     }
 
     const key = interaction.options.getString('key').toLowerCase();
@@ -27,9 +28,9 @@ async function execute(client, interaction) {
 
     try {
         serverManager.addServer(key, name, uuid);
-        return interaction.reply(ephemeralReply('✅ Server added'));
+        return safeReply(interaction, ephemeralReply('✅ Server added'));
     } catch (err) {
-        return interaction.reply(ephemeralReply(`❌ ${err.message}`));
+        return safeReply(interaction, ephemeralReply(`❌ ${err.message}`));
     }
 }
 

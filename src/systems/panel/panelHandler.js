@@ -15,7 +15,7 @@ module.exports = async function handlePanel(interaction, client) {
 
     if (!['start', 'stop', 'restart'].includes(action)) return false;
 
-    if (!hasAccess(interaction)) {
+    if (!(await hasAccess(interaction))) {
         await interaction.reply(noPermissionReply());
         return true;
     }
