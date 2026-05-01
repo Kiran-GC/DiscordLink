@@ -24,7 +24,7 @@ function buildEmbed() {
 async function buildDropdown() {
   const servers = await serverManager.getAllServers();
 
-  // ✅ HANDLE EMPTY STATE (prevents Discord 50035 error)
+  // ✅ Handle empty case (no crash)
   if (!servers.length) {
     return new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
@@ -64,8 +64,11 @@ async function upsertAdminPanel(client) {
   if (savedId) {
     try {
       message = await channel.messages.fetch(savedId);
-    } catch {
-      message = null;
+    } catch (err) {
+      console.log("⚠️ Admin panel fetch failed:", err.message);
+
+      // ❌ Do NOT recreate automatically here
+      return;
     }
   }
 
@@ -78,6 +81,7 @@ async function upsertAdminPanel(client) {
       components: [dropdown]
     });
   } else {
+    // ✅ Only create when explicitly needed
     message = await channel.send({
       embeds: [embed],
       components: [dropdown]

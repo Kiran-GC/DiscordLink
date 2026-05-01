@@ -12,9 +12,11 @@ module.exports = async function handleAdminPanel(interaction, client) {
   if (interaction.isStringSelectMenu() && interaction.customId === "admin_select_server") {
     const key = interaction.values[0];
 
-    await interaction.deferReply({ ephemeral: true });
+    // ✅ FIX: acknowledge interaction silently (no ephemeral reply)
+    await interaction.deferUpdate();
 
-    const msg = await interaction.editReply({
+    // ✅ FIX: send NORMAL message to channel instead of editReply
+    await interaction.channel.send({
       content: `⚙️ Control panel for \`${key}\``,
       components: [
         new ActionRowBuilder().addComponents(
@@ -34,7 +36,10 @@ module.exports = async function handleAdminPanel(interaction, client) {
   // Close button
   if (interaction.isButton() && interaction.customId === "close_panel") {
     await interaction.deferUpdate();
-    await interaction.deleteReply();
+
+    // ✅ FIX: delete the actual message (not reply)
+    await interaction.message.delete();
+
     return true;
   }
 
