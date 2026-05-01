@@ -14,7 +14,11 @@ class PteroClient {
 
   async getState(serverId) {
     const res = await this.client.get(`/servers/${serverId}/resources`);
-    return res.data.attributes.current_state;
+
+    // 🔍 DEBUG (remove later)
+    console.log("Ptero Response:", JSON.stringify(res.data, null, 2));
+
+    return res.data?.attributes?.current_state;
   }
 
   async power(serverId, signal) {
