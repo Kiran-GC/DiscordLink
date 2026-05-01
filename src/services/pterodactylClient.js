@@ -3,7 +3,7 @@ const axios = require("axios");
 class PteroClient {
   constructor() {
     this.client = axios.create({
-      baseURL: "https://api.pebblehost.com/api/client",
+      baseURL: "https://panel.pebblehost.com/api/client",
       headers: {
         Authorization: `Bearer ${process.env.PTERO_API_KEY}`,
         "Content-Type": "application/json",
