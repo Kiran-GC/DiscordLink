@@ -13,6 +13,7 @@ const { loadPanel, savePanel, clearPanel } = require('../utils/storage');
 const { isMissingPermissionsError, isUnknownMessageError } = require('../utils/discordErrors');
 const { setMessage, startUpdater } = require('../systems/updater');
 const { initVerifyGuard } = require('../systems/verifyGuard');
+const handlePanel = require('../systems/panel/panelHandler');
 
 // Tutorials
 const { handleTutorials, upsertPanel } = require('../systems/tutorials/tutorials');
@@ -123,10 +124,12 @@ client.on('interactionCreate', async interaction => {
         if (interaction.isChatInputCommand()) {
             return handleInteraction(client, interaction);
         }
-
         if (interaction.isStringSelectMenu() || interaction.isButton()) {
             const handled = await handleTutorials(interaction, client);
             if (handled) return;
+
+            const panelHandled = await handlePanel(interaction, client);
+            if (panelHandled) return;
         }
 
         if (interaction.isButton() || interaction.isModalSubmit()) {
