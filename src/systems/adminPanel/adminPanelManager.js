@@ -4,6 +4,7 @@ const {
   StringSelectMenuBuilder
 } = require("discord.js");
 
+const ptero = require("../../services/pterodactylClient");
 const serverManager = require("../../services/serverManager");
 const { savePanel, loadPanel } = require("./adminStorage");
 
@@ -11,10 +12,38 @@ const CHANNEL_ID = "1499786649599738059";
 
 /* ---------------- EMBED ---------------- */
 
-function buildEmbed() {
+async function buildEmbed() {
+  const servers = await serverManager.getAllServers();
+
+  let description = "Select a server below to manage it.\n\n";
+
+  if (!servers.length) {
+    description += "⚠️ No servers configured";
+  } else {
+    const lines = await Promise.all(
+      servers.map(async (s) => {
+        try {
+          const res = await ptero.client.get(`/servers/${s.id}/resources`);
+          const state = res.data?.attributes?.state;
+
+          let icon = "🔴";
+          if (state === "running") icon = "🟢";
+          else if (state === "starting") icon = "🟡";
+          else if (state === "stopping") icon = "🟠";
+
+          return `${icon} **${s.key}**`;
+        } catch {
+          return `⚪ **${s.key}**`;
+        }
+      })
+    );
+
+    description += lines.join("\n");
+  }
+
   return new EmbedBuilder()
     .setTitle("🛠 Admin Server Panel")
-    .setDescription("Select a server below to manage it.")
+    .setDescription(description)
     .setFooter({ text: "Admin Panel • Vortex" })
     .setTimestamp();
 }
@@ -24,7 +53,6 @@ function buildEmbed() {
 async function buildDropdown() {
   const servers = await serverManager.getAllServers();
 
-  // ✅ Handle empty case (no crash)
   if (!servers.length) {
     return new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
@@ -64,15 +92,13 @@ async function upsertAdminPanel(client) {
   if (savedId) {
     try {
       message = await channel.messages.fetch(savedId);
-    } catch (err) {
-      console.log("⚠️ Admin panel fetch failed:", err.message);
-
-      // ❌ Do NOT recreate automatically here
+    } catch {
+      console.log("⚠️ Admin panel missing, run /listservers to recreate");
       return;
     }
   }
 
-  const embed = buildEmbed();
+  const embed = await buildEmbed();
   const dropdown = await buildDropdown();
 
   if (message) {
@@ -81,13 +107,12 @@ async function upsertAdminPanel(client) {
       components: [dropdown]
     });
   } else {
-    // ✅ Only create when explicitly needed
-    message = await channel.send({
+    const msg = await channel.send({
       embeds: [embed],
       components: [dropdown]
     });
 
-    savePanel(message.id);
+    savePanel(msg.id);
   }
 }
 

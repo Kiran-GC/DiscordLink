@@ -172,4 +172,9 @@ async function createPanel(interaction, key) {
   return;
 }
 
-module.exports = { createPanel, updatePanel };
+module.exports = {
+  createPanel,
+  updatePanel,
+  buildEmbed,   // ✅ required
+  buildButtons  // optional
+};
