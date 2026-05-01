@@ -10,6 +10,38 @@ const { savePanel, loadPanel } = require("./adminStorage");
 
 const CHANNEL_ID = "1499786649599738059";
 
+/* ---------------- STATUS TEXT ---------------- */
+
+function statusText(state) {
+  switch (state) {
+    case "running":
+      return "Online";
+    case "starting":
+      return "Starting";
+    case "stopping":
+      return "Stopping";
+    case "offline":
+    default:
+      return "Offline";
+  }
+}
+
+/* ---------------- STATUS ICON ---------------- */
+
+function statusIcon(state) {
+  switch (state) {
+    case "running":
+      return "🟢";
+    case "starting":
+      return "🟡";
+    case "stopping":
+      return "🟠";
+    case "offline":
+    default:
+      return "🔴";
+  }
+}
+
 /* ---------------- EMBED ---------------- */
 
 async function buildEmbed() {
@@ -23,17 +55,18 @@ async function buildEmbed() {
     const lines = await Promise.all(
       servers.map(async (s) => {
         try {
-          const res = await ptero.client.get(`/servers/${s.id}/resources`);
-          const state = res.data?.attributes?.state;
+          const [resourcesRes, serverRes] = await Promise.all([
+            ptero.client.get(`/servers/${s.id}/resources`),
+            ptero.client.get(`/servers/${s.id}`)
+          ]);
 
-          let icon = "🔴";
-          if (state === "running") icon = "🟢";
-          else if (state === "starting") icon = "🟡";
-          else if (state === "stopping") icon = "🟠";
+          const state = resourcesRes.data?.attributes?.state;
+          const name = serverRes.data?.attributes?.name;
 
-          return `${icon} **${s.key}**`;
+          return `• ${statusIcon(state)} **${name}** - Status: \`${statusText(state)}\``;
+
         } catch {
-          return `⚪ **${s.key}**`;
+          return `• ⚪ **${s.key}** - Status: \`Unknown\``;
         }
       })
     );
@@ -68,16 +101,31 @@ async function buildDropdown() {
     );
   }
 
+  // ✅ Use REAL server names for dropdown labels
+  const options = await Promise.all(
+    servers.slice(0, 25).map(async (s) => {
+      try {
+        const res = await ptero.client.get(`/servers/${s.id}`);
+        const name = res.data?.attributes?.name;
+
+        return {
+          label: name || s.key,
+          value: s.key
+        };
+      } catch {
+        return {
+          label: s.key,
+          value: s.key
+        };
+      }
+    })
+  );
+
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId("admin_select_server")
       .setPlaceholder("Select a server")
-      .addOptions(
-        servers.slice(0, 25).map(s => ({
-          label: s.key,
-          value: s.key
-        }))
-      )
+      .addOptions(options)
   );
 }
 

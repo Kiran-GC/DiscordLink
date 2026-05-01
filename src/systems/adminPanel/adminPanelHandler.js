@@ -21,17 +21,21 @@ module.exports = async function handleAdminPanel(interaction, client) {
       const server = await serverManager.getServer(key);
       if (!server) return true;
 
-      // Fetch live data
-      const res = await ptero.client.get(`/servers/${server.id}/resources`);
-      const attr = res.data?.attributes || {};
+      // ✅ Fetch BOTH resources + server info (for name)
+      const [resourcesRes, serverRes] = await Promise.all([
+        ptero.client.get(`/servers/${server.id}/resources`),
+        ptero.client.get(`/servers/${server.id}`)
+      ]);
+
+      const attr = resourcesRes.data?.attributes || {};
+      const serverAttr = serverRes.data?.attributes || {};
 
       const data = {
         state: attr.state,
         uptime: attr.resources?.uptime,
-        name: server.name
+        name: serverAttr.name // ✅ REAL NAME FROM PANEL
       };
 
-      // Use panelManager embed
       const embed = panelManager.buildEmbed(data);
 
       await interaction.channel.send({
