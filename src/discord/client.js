@@ -144,4 +144,6 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-client.login(DISCORD_TOKEN);
+module.exports = async function startClient() {
+    await client.login(DISCORD_TOKEN);
+};

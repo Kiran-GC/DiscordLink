@@ -11,6 +11,8 @@
     "discord.js": "^14.26.2",
     "express": "^5.2.1",
     "fetch": "^1.1.0",
-    "mc-server-util": "^1.0.0"
+    "mc-server-util": "^1.0.0",
+    "mongodb": "^7.2.0",
+    "mongoose": "^9.6.1"
   }
 }

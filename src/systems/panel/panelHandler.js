@@ -20,7 +20,7 @@ module.exports = async function handlePanel(interaction, client) {
         return true;
     }
 
-    const server = serverManager.getServer(key);
+    const server = await serverManager.getServer(key); // ✅ FIX
     if (!server) return true;
 
     const cdKey = `${interaction.user.id}_${action}`;

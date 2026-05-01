@@ -111,7 +111,8 @@ async function updatePanel(client, channelId) {
   const panel = panels.get(channelId);
   if (!panel) return;
 
-  const server = serverManager.getServer(panel.serverKey);
+  // ✅ FIX: await Mongo call
+  const server = await serverManager.getServer(panel.serverKey);
   if (!server) return;
 
   const channel = await client.channels.fetch(channelId);
@@ -147,7 +148,8 @@ function startPolling(client, channelId) {
 /* ---------------- CREATE PANEL ---------------- */
 
 async function createPanel(interaction, key) {
-  const server = serverManager.getServer(key);
+  // ✅ FIX: await Mongo call
+  const server = await serverManager.getServer(key);
   if (!server) {
     throw new Error("Server not found");
   }

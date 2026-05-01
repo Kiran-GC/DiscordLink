@@ -7,6 +7,8 @@ const embed = require('./commandModules/embed');
 const ping = require('./commandModules/ping');
 const addserver = require('./commandModules/addserver');
 const panelstat = require('./commandModules/panelstat');
+const removeserver = require('./commandModules/removeserver');
+const listservers = require('./commandModules/listservers');
 
 const commandModules = [
     serverstat,
@@ -17,7 +19,9 @@ const commandModules = [
     embed,
     ping,
     addserver,
-    panelstat
+    panelstat,
+    removeserver,
+    listservers
 ];
 
 const commands = commandModules.map(command => command.data);

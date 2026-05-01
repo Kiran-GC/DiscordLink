@@ -19,12 +19,12 @@ async function execute(client, interaction) {
     return interaction.reply(noPermissionReply());
   }
 
-  // ✅ ACK immediately to avoid 10062
   await interaction.deferReply({ ephemeral: true });
 
   const key = interaction.options.getString('servername').toLowerCase();
 
-  if (!serverManager.getServer(key)) {
+  const server = await serverManager.getServer(key); // ✅ FIX
+  if (!server) {
     return interaction.editReply('❌ Server not found');
   }
 

@@ -1,37 +1,46 @@
-const fs = require("fs");
-const path = require("path");
+const Server = require("../models/Server");
 
-const filePath = path.join(__dirname, "../config/servers.json");
+/* ---------------- GET ---------------- */
 
-function load() {
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, JSON.stringify({}));
-  }
-  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+async function getServer(key) {
+  return await Server.findOne({ key });
 }
 
-function save(data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-}
+/* ---------------- ADD ---------------- */
 
-function getServer(key) {
-  const data = load();
-  return data[key];
-}
-
-function addServer(key, name, uuid) {
-  const data = load();
-
+async function addServer(key, name, uuid) {
   if (!/^[a-z0-9_-]+$/.test(key)) {
     throw new Error("Invalid key format");
   }
 
-  if (data[key]) {
+  const exists = await Server.findOne({ key });
+  if (exists) {
     throw new Error("Server key already exists");
   }
 
-  data[key] = { id: uuid, name };
-  save(data);
+  await Server.create({
+    key,
+    name,
+    id: uuid
+  });
 }
 
-module.exports = { getServer, addServer };
+/* ---------------- REMOVE ---------------- */
+
+async function removeServer(key) {
+  const res = await Server.findOneAndDelete({ key });
+  return !!res;
+}
+
+/* ---------------- LIST ---------------- */
+
+async function getAllServers() {
+  return await Server.find({});
+}
+
+module.exports = {
+  getServer,
+  addServer,
+  removeServer,
+  getAllServers
+};
