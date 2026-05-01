@@ -30,15 +30,17 @@ function statusText(state) {
 // ms → "Xd Ym"
 function formatUptime(ms) {
   if (!ms) return "0m";
+
   const totalMinutes = Math.floor(ms / 60000);
   const days = Math.floor(totalMinutes / (60 * 24));
   const minutes = totalMinutes % (60 * 24);
+
   return days > 0 ? `${days}d ${minutes}m` : `${minutes}m`;
 }
 
 /* ---------------- EMBED ---------------- */
 
-function buildEmbed(server, data) {
+function buildEmbed(data) {
   const state = data.state;
   const uptime = formatUptime(data.uptime);
 
@@ -57,7 +59,7 @@ function buildEmbed(server, data) {
       },
       {
         name: "🖥 Server",
-        value: `\`${server.name}\``,
+        value: `\`${data.name || "Unknown"}\``,
         inline: false
       }
     )
@@ -88,14 +90,20 @@ function buildButtons(key) {
 
 /* ---------------- CORE ---------------- */
 
+// Fetch both resources + server info
 async function fetchData(serverId) {
-  const res = await ptero.client.get(`/servers/${serverId}/resources`);
-  const attr = res.data?.attributes || {};
+  const [resourcesRes, serverRes] = await Promise.all([
+    ptero.client.get(`/servers/${serverId}/resources`),
+    ptero.client.get(`/servers/${serverId}`)
+  ]);
+
+  const attr = resourcesRes.data?.attributes || {};
+  const serverAttr = serverRes.data?.attributes || {};
 
   return {
-    // PebbleHost returns `state` (not current_state)
     state: attr.state,
-    uptime: attr.resources?.uptime
+    uptime: attr.resources?.uptime,
+    name: serverAttr.name
   };
 }
 
@@ -112,7 +120,7 @@ async function updatePanel(client, channelId) {
   const data = await fetchData(server.id);
 
   await msg.edit({
-    embeds: [buildEmbed(server, data)]
+    embeds: [buildEmbed(data)]
   });
 }
 
@@ -126,7 +134,8 @@ function startPolling(client, channelId) {
       await updatePanel(client, channelId);
     } catch (err) {
       console.error("Panel update failed:", err.message);
-      // stop spam loop on failure
+
+      // stop infinite loop if API breaks
       clearInterval(intervals.get(channelId));
       intervals.delete(channelId);
     }
@@ -140,14 +149,13 @@ function startPolling(client, channelId) {
 async function createPanel(interaction, key) {
   const server = serverManager.getServer(key);
   if (!server) {
-    // command handles reply lifecycle
     throw new Error("Server not found");
   }
 
   const data = await fetchData(server.id);
 
   const msg = await interaction.channel.send({
-    embeds: [buildEmbed(server, data)],
+    embeds: [buildEmbed(data)],
     components: [buildButtons(key)]
   });
 
@@ -158,7 +166,7 @@ async function createPanel(interaction, key) {
 
   startPolling(interaction.client, interaction.channel.id);
 
-  // ❌ DO NOT reply here (handled by command)
+  // ❌ No reply here — handled in command
   return;
 }
 
