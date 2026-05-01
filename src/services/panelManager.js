@@ -27,16 +27,13 @@ function statusText(state) {
   }
 }
 
-// Convert ms → "Xd Ym"
+// ms → "Xd Ym"
 function formatUptime(ms) {
   if (!ms) return "0m";
-
   const totalMinutes = Math.floor(ms / 60000);
   const days = Math.floor(totalMinutes / (60 * 24));
   const minutes = totalMinutes % (60 * 24);
-
-  if (days > 0) return `${days}d ${minutes}m`;
-  return `${minutes}m`;
+  return days > 0 ? `${days}d ${minutes}m` : `${minutes}m`;
 }
 
 /* ---------------- EMBED ---------------- */
@@ -93,10 +90,10 @@ function buildButtons(key) {
 
 async function fetchData(serverId) {
   const res = await ptero.client.get(`/servers/${serverId}/resources`);
-
   const attr = res.data?.attributes || {};
 
   return {
+    // PebbleHost returns `state` (not current_state)
     state: attr.state,
     uptime: attr.resources?.uptime
   };
@@ -129,8 +126,7 @@ function startPolling(client, channelId) {
       await updatePanel(client, channelId);
     } catch (err) {
       console.error("Panel update failed:", err.message);
-
-      // stop spam loop
+      // stop spam loop on failure
       clearInterval(intervals.get(channelId));
       intervals.delete(channelId);
     }
@@ -144,7 +140,8 @@ function startPolling(client, channelId) {
 async function createPanel(interaction, key) {
   const server = serverManager.getServer(key);
   if (!server) {
-    return interaction.reply({ content: "❌ Server not found", ephemeral: true });
+    // command handles reply lifecycle
+    throw new Error("Server not found");
   }
 
   const data = await fetchData(server.id);
@@ -161,10 +158,8 @@ async function createPanel(interaction, key) {
 
   startPolling(interaction.client, interaction.channel.id);
 
-  return interaction.reply({
-    content: "✅ Panel created",
-    ephemeral: true
-  });
+  // ❌ DO NOT reply here (handled by command)
+  return;
 }
 
 module.exports = { createPanel, updatePanel };

@@ -2,31 +2,39 @@ const { SlashCommandBuilder } = require('discord.js');
 const panelManager = require('../../services/panelManager');
 const serverManager = require('../../services/serverManager');
 const { hasAccess } = require('../../utils/permissions');
-const { noPermissionReply, ephemeralReply } = require('../../utils/interactionReplies');
-const { safeReply } = require('../../utils/safeReply');
+const { noPermissionReply } = require('../../utils/interactionReplies');
 
 const data = new SlashCommandBuilder()
-    .setName('panelstat')
-    .setDescription('Create server control panel')
-    .addStringOption(option =>
-        option
-            .setName('servername')
-            .setDescription('Server key')
-            .setRequired(true)
-    );
+  .setName('panelstat')
+  .setDescription('Create server control panel')
+  .addStringOption(option =>
+    option
+      .setName('servername')
+      .setDescription('Server key')
+      .setRequired(true)
+  );
 
 async function execute(client, interaction) {
-    if (!(await hasAccess(interaction))) {
-        return safeReply(interaction, noPermissionReply());
-    }
+  if (!(await hasAccess(interaction))) {
+    return interaction.reply(noPermissionReply());
+  }
 
-    const key = interaction.options.getString('servername').toLowerCase();
+  // ✅ ACK immediately to avoid 10062
+  await interaction.deferReply({ ephemeral: true });
 
-    if (!serverManager.getServer(key)) {
-        return safeReply(interaction, ephemeralReply('❌ Server not found'));
-    }
+  const key = interaction.options.getString('servername').toLowerCase();
 
-    return panelManager.createPanel(interaction, key);
+  if (!serverManager.getServer(key)) {
+    return interaction.editReply('❌ Server not found');
+  }
+
+  try {
+    await panelManager.createPanel(interaction, key);
+    return interaction.editReply('✅ Panel created');
+  } catch (err) {
+    console.error(err);
+    return interaction.editReply('❌ Failed to create panel');
+  }
 }
 
 module.exports = { data, execute };

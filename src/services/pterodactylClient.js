@@ -14,10 +14,7 @@ class PteroClient {
 
   async getState(serverId) {
     const res = await this.client.get(`/servers/${serverId}/resources`);
-
-    // 🔍 DEBUG (remove later)
-    console.log("Ptero Response:", JSON.stringify(res.data, null, 2));
-
+    // PebbleHost uses `state`
     return res.data?.attributes?.state;
   }
 
