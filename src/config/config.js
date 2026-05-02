@@ -14,7 +14,7 @@ module.exports = {
     CONNECTION_INFO_FOOTER: 'Watcher v1 • Connection Info',
 
     MC_HOST: 'play.gamerluttan.online',
-    MC_PORT: 25588,
+    MC_PORT: 25591,
     MC_PRIMARY_IP: 'play.gamerluttan.online',
     MC_SECONDARY_IP: 'play.adholokham.online',
 
